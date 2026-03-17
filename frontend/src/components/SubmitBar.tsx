@@ -313,20 +313,30 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
           {heroText}<span className="typewriter-cursor">|</span>
         </p>
         <form onSubmit={handleSubmit} className="submit-hero-form">
-          <input
-            type="text"
-            className="submit-hero-input"
-            placeholder={placeholder}
-            value={url}
-            onChange={(e) => {
-              setUrl(e.target.value);
-              if (status === "error" || status === "waking") setStatus("idle");
-            }}
-            disabled={status === "loading"}
-            autoComplete="off"
-            spellCheck={false}
-            autoFocus
-          />
+          <div className="submit-url-row">
+            <input
+              type="text"
+              className="submit-hero-input"
+              placeholder={placeholder}
+              value={url}
+              onChange={(e) => {
+                setUrl(e.target.value);
+                if (status === "error" || status === "waking") setStatus("idle");
+              }}
+              disabled={status === "loading"}
+              autoComplete="off"
+              spellCheck={false}
+              autoFocus
+            />
+            <button
+              ref={heroBtnRef}
+              type="submit"
+              className="submit-hero-btn"
+              disabled={status === "loading" || !url.trim()}
+            >
+              {status === "loading" ? "dropping pin…" : isWaking ? "try again" : showPreview ? "share to map" : "share"}
+            </button>
+          </div>
           <div className="submit-identity-row">
             <input
               type="text"
@@ -349,14 +359,6 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
               spellCheck={false}
             />
           </div>
-          <button
-            ref={heroBtnRef}
-            type="submit"
-            className="submit-hero-btn"
-            disabled={status === "loading" || !url.trim()}
-          >
-            {status === "loading" ? "dropping pin…" : isWaking ? "try again" : showPreview ? "share to map" : "share"}
-          </button>
         </form>
 
         {showPreview && metadata && (

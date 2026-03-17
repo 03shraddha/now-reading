@@ -689,7 +689,8 @@ html, body, #root {
   50%       { opacity: 0; }
 }
 
-.submit-hero-form { display: flex; gap: 8px; }
+.submit-hero-form { display: flex; flex-direction: column; gap: 8px; }
+.submit-url-row   { display: flex; gap: 8px; }
 
 .submit-hero-input {
   flex: 1;
@@ -1632,10 +1633,8 @@ html, body, #root {
     font-size: 11px;
   }
 
-  .submit-hero-form {
-    flex-direction: column;
-    gap: 10px;
-  }
+  .submit-hero-form { gap: 10px; }
+  .submit-url-row   { gap: 8px; }
 
   .submit-hero-input {
     padding: 15px 18px;
