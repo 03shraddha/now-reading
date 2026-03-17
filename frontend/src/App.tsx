@@ -59,7 +59,7 @@ export default function App() {
       {/* ── Header ──────────────────────────────────────── */}
       <header className="app-header">
         <span className="live-dot" />
-        <span className="app-title">Now Reading</span>
+        <span className="app-title">now reading</span>
         <span className="app-subtitle">
           {liveCount > 0 ? `${liveCount} live` : "live"}
         </span>

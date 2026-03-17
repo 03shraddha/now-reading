@@ -96,7 +96,7 @@ export function ActivityFeed() {
   return (
     <div className="activity-feed">
       <div className="feed-header">
-        <span className="feed-title">Live</span>
+        <span className="feed-title">live</span>
         <span className="feed-count">{cards.length}</span>
       </div>
 

@@ -2,11 +2,11 @@ import { useState, useEffect, useRef } from "react";
 import type { PinDropPayload } from "../hooks/usePinDrop";
 
 const PLACEHOLDERS = [
-  "Paste a news article…",
-  "Paste a blog post…",
-  "Paste a Wikipedia page…",
-  "Paste a research paper…",
-  "Paste what you're reading…",
+  "paste a news article…",
+  "paste a blog post…",
+  "paste a wikipedia page…",
+  "paste a research paper…",
+  "paste what you're reading…",
 ];
 
 interface Metadata {
@@ -88,12 +88,12 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
       const parsed = new URL(trimmed);
       if (!["http:", "https:"].includes(parsed.protocol)) {
         setStatus("error");
-        setErrorMsg("Only http/https URLs are allowed");
+        setErrorMsg("only http/https urls are allowed");
         return;
       }
     } catch {
       setStatus("error");
-      setErrorMsg("That doesn't look like a valid URL");
+      setErrorMsg("that doesn't look like a valid url");
       return;
     }
 
@@ -109,7 +109,7 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.detail || "Submission failed");
+        throw new Error(data.detail || "submission failed");
       }
 
       const data = await res.json();
@@ -135,7 +135,7 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
       setTimeout(() => setStatus("idle"), 3000);
     } catch (err: any) {
       setStatus("error");
-      setErrorMsg(err.message || "Something went wrong");
+      setErrorMsg(err.message || "something went wrong");
     }
   }
 
@@ -150,7 +150,7 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
           <input
             type="text"
             className="submit-mini-input"
-            placeholder="Paste a URL…"
+            placeholder="paste a url…"
             value={url}
             onChange={(e) => {
               setUrl(e.target.value);
@@ -171,7 +171,7 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
         </form>
         {status === "success" && (
           <div className="submit-mini-success">
-            {submitCount > 1 ? `🔥 ${submitCount} reading this` : "On the map!"}
+            {submitCount > 1 ? `🔥 ${submitCount} reading this` : "on the map!"}
           </div>
         )}
       </div>
@@ -182,7 +182,7 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
   return (
     <div className="submit-hero-wrapper">
       <div className="submit-hero-card">
-        <p className="submit-hero-eyebrow">What are you reading right now?</p>
+        <p className="submit-hero-eyebrow">what are you reading right now?</p>
         <form onSubmit={handleSubmit} className="submit-hero-form">
           <input
             type="text"
@@ -204,7 +204,7 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
             className="submit-hero-btn"
             disabled={status === "loading" || !url.trim()}
           >
-            {status === "loading" ? "Dropping pin…" : showPreview ? "Share to map" : "Share"}
+            {status === "loading" ? "dropping pin…" : showPreview ? "share to map" : "share"}
           </button>
         </form>
 
@@ -226,7 +226,7 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
         {status === "error" && <div className="submit-hero-error">{errorMsg}</div>}
         {status === "success" && (
           <div className="submit-hero-success">
-            {submitCount > 1 ? `🔥 ${submitCount} people reading this` : "You're on the map!"}
+            {submitCount > 1 ? `🔥 ${submitCount} people reading this` : "you're on the map!"}
           </div>
         )}
       </div>
