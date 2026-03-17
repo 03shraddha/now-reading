@@ -215,7 +215,7 @@ async def submit(
         doc_ref.set({
             "url": normalized,
             "domain": domain,
-            "title": meta.get("title", domain),
+            "title": meta.get("title") if meta.get("title") != domain else None,
             "favicon_url": meta.get("favicon_url", f"https://www.google.com/s2/favicons?domain={domain}&sz=32"),
             "city": location["city"],
             "country": location["country"],
@@ -232,7 +232,7 @@ async def submit(
         "lng": location["lng"],
         "city": location["city"],
         "domain": domain,
-        "title": meta.get("title", domain),
+        "title": meta.get("title") if meta.get("title") != domain else None,
         "favicon_url": meta.get("favicon_url", f"https://www.google.com/s2/favicons?domain={domain}&sz=32"),
         "count": count,
     }

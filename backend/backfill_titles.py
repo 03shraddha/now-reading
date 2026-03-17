@@ -1,6 +1,5 @@
 """
-One-time backfill script: update Firestore docs where title == domain (or is null)
-with real article titles fetched from the metadata service.
+One-time backfill script: re-fetch and update titles for ALL Firestore docs.
 
 Run from the backend/ directory:
     python backfill_titles.py
@@ -15,9 +14,9 @@ from services.metadata import fetch_metadata
 
 async def backfill():
     db = get_db()
-    collection = db.collection("submissions")
+    docs = list(db.collection("submissions").stream())
+    print(f"Processing {len(docs)} documents...\n")
 
-    docs = collection.stream()
     updated = 0
     skipped = 0
     failed = 0
@@ -28,23 +27,33 @@ async def backfill():
         domain = data.get("domain", "")
         title  = data.get("title")
 
-        # Only process docs where title is missing or equals the domain
-        if title and title != domain:
-            skipped += 1
-            continue
-
         meta = await fetch_metadata(url)
         real_title = meta.get("title", "")
 
         if real_title and real_title != domain:
-            doc.reference.update({"title": real_title})
-            print(f"  OK  {domain} -> {real_title[:80]}")
-            updated += 1
+            # Only write if different from what's stored
+            if real_title != title:
+                doc.reference.update({"title": real_title})
+                print(f"  OK  {domain} -> {real_title[:80]}")
+                updated += 1
+            else:
+                skipped += 1
         else:
-            print(f"  -- {domain} - could not fetch real title")
-            failed += 1
+            # Fetch failed — only clear if stored title is also bad (domain or null)
+            # Never overwrite a previously backfilled real title
+            if title and title != domain:
+                print(f"  KEEP {domain} - fetch failed but keeping stored title: {title[:80]}")
+                skipped += 1
+            elif title is not None:
+                # title was the domain string — clear it so frontend fetches dynamically
+                doc.reference.update({"title": None})
+                print(f"  NULL {domain} - cleared domain-as-title")
+                failed += 1
+            else:
+                skipped += 1
+                failed += 1
 
-    print(f"\nDone. Updated: {updated}  Skipped (already had title): {skipped}  Failed: {failed}")
+    print(f"\nDone. Updated: {updated}  Already correct: {skipped}  Could not fetch (cleared to null): {failed}")
 
 
 if __name__ == "__main__":
