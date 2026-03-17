@@ -79,7 +79,7 @@ export function ActivityFeed() {
     }
 
     return Array.from(map.values());
-  }, [inBoundsSubmissions]);
+  }, [submissions]);
 
   // Reset sort to "recent" when feed has fewer than 2 cards (sort is meaningless)
   useEffect(() => {
