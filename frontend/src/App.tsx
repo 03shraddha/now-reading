@@ -5,8 +5,15 @@ import { ActivityFeed }    from "./components/ActivityFeed";
 import { PinDropOverlay }  from "./components/PinDropOverlay";
 import { usePinDrop }      from "./hooks/usePinDrop";
 import { useSubmissionsStore } from "./store/submissionsStore";
+import { useTypewriter }   from "./hooks/useTypewriter";
 import type { MapViewHandle }  from "./components/MapView";
 import "./App.css";
+
+const TAGLINE_PHRASES = [
+  "share what you're reading & discover what others are reading around the world",
+  "drop a link. see the world read.",
+  "what's everyone reading right now?",
+];
 
 function SubmissionBanner() {
   const banner             = useSubmissionsStore((s) => s.submissionBanner);
@@ -69,6 +76,8 @@ export default function App() {
     };
   }, []);
 
+  const tagline = useTypewriter(TAGLINE_PHRASES, { typeSpeed: 35, deleteSpeed: 18, pauseAfter: 2400 });
+
   function toggleTheme() {
     setTheme((t) => (t === "dark" ? "light" : "dark"));
   }
@@ -87,7 +96,7 @@ export default function App() {
       <header className="app-header">
         <span className="live-dot" />
         <span className="app-title">now reading</span>
-        <span className="app-tagline">share what you're reading &amp; discover what others are reading around the world</span>
+        <span className="app-tagline">{tagline}<span className="typewriter-cursor">|</span></span>
         <span className="app-subtitle">
           {liveCount > 0 ? `${liveCount} live` : "live"}
         </span>

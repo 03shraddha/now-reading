@@ -2,6 +2,14 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import type { PinDropPayload } from "../hooks/usePinDrop";
 import { useSubmissionsStore } from "../store/submissionsStore";
 import { apiUrl } from "../lib/api";
+import { useTypewriter } from "../hooks/useTypewriter";
+
+const HERO_PHRASES = [
+  "what are you reading right now?",
+  "share a link, drop a pin :)",
+  "discover what the world is reading",
+  "reading anything good lately?",
+];
 
 const PLACEHOLDERS = [
   "paste a news article…",
@@ -224,7 +232,8 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
 
   const placeholder = PLACEHOLDERS[placeholderIdx];
   const showPreview = status === "previewing" && metadata;
-  const isWaking = status === "waking";
+  const isWaking    = status === "waking";
+  const heroText    = useTypewriter(HERO_PHRASES);
 
   if (collapsed) {
     // Mini pill in bottom-right corner
@@ -262,7 +271,9 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
     <div className="submit-hero-wrapper">
       <div className="submit-hero-card">
         <button className="submit-hero-dismiss" onClick={onFirstSubmit} aria-label="Dismiss">×</button>
-        <p className="submit-hero-eyebrow">what are you reading right now?</p>
+        <p className="submit-hero-eyebrow">
+          {heroText}<span className="typewriter-cursor">|</span>
+        </p>
         <form onSubmit={handleSubmit} className="submit-hero-form">
           <input
             type="text"

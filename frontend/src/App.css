@@ -623,6 +623,20 @@ html, body, #root {
 .submit-hero-eyebrow {
   font-size: 15px; font-weight: 400; color: #A09DAE;
   letter-spacing: 0.1em; text-align: center; text-transform: uppercase;
+  min-height: 1.5em; /* prevent layout jump as text changes */
+}
+
+/* Typewriter blinking cursor */
+.typewriter-cursor {
+  display: inline-block;
+  margin-left: 1px;
+  font-weight: 300;
+  opacity: 1;
+  animation: cursor-blink 0.75s step-end infinite;
+}
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
 }
 
 .submit-hero-form { display: flex; gap: 8px; }
