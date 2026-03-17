@@ -113,7 +113,7 @@ export default function App() {
           onFirstSubmit={() => setSubmitted(true)}
           onPinDrop={triggerDrop}
         />
-        {submitted && <ActivityFeed />}
+        <ActivityFeed />
       </div>
 
       {/* ── Pin drop overlay — above map, below header ─── */}

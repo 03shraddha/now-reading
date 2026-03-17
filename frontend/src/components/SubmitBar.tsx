@@ -8,6 +8,7 @@ const PLACEHOLDERS = [
   "paste a blog post…",
   "paste a wikipedia page…",
   "paste a research paper…",
+  "paste a goodreads book link…",
   "paste what you're reading…",
 ];
 

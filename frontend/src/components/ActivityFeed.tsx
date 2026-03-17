@@ -97,17 +97,19 @@ export function ActivityFeed() {
   }, [inBoundsSubmissions]);
 
   // ── Dominant region for header ────────────────────────────
+  // Escalates: single city → country → "worldwide"
   const regionName = useMemo(() => {
-    const cityCount = new Map<string, number>();
-    for (const card of allCards) {
-      for (const c of card.cities) cityCount.set(c.name, (cityCount.get(c.name) ?? 0) + c.count);
+    const cities    = new Set<string>();
+    const countries = new Set<string>();
+    for (const sub of inBoundsSubmissions.values()) {
+      if (sub.city)    cities.add(sub.city);
+      if (sub.country) countries.add(sub.country);
     }
-    let top = "", topCount = 0;
-    for (const [city, count] of cityCount) {
-      if (count > topCount) { top = city; topCount = count; }
-    }
-    return top || null;
-  }, [allCards]);
+    if (cities.size === 0) return null;
+    if (cities.size === 1) return [...cities][0];           // single city → show it
+    if (countries.size === 1) return [...countries][0];     // many cities, one country → show country
+    return "worldwide";                                     // many countries → global
+  }, [inBoundsSubmissions]);
 
   // Reset sort to "recent" when feed has fewer than 2 cards (sort is meaningless)
   useEffect(() => {
@@ -187,7 +189,7 @@ export function ActivityFeed() {
           <input
             id="feed-city-input"
             className={`feed-city-input${cityQuery ? " feed-city-input--active" : ""}`}
-            placeholder="search by city :)…"
+            placeholder="filter by your city :)…"
             value={cityQuery}
             onChange={(e) => setCityQuery(e.target.value)}
             spellCheck={false}

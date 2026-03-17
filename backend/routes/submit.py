@@ -175,7 +175,9 @@ async def submit(
     await moderation.check_safe_browsing(body.url)
 
     # 2. Rate limit by hashed IP
-    client_ip = request.client.host if request.client else ""
+    # On Render (behind a load balancer), the real IP is in X-Forwarded-For
+    forwarded = request.headers.get("x-forwarded-for", "")
+    client_ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "")
     ip_hash = _hash_ip(client_ip)
     _check_rate_limit(ip_hash)
 
