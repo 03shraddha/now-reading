@@ -281,10 +281,18 @@ html, body, #root {
   transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.reading-dot--cool { background: #3BBBC8; }
-.reading-dot--warm { background: #D97655; }
+/* Soft halo = visual cue that location is IP-approximate, not exact */
+.reading-dot--cool {
+  background: #3BBBC8;
+  box-shadow: 0 0 0 3px rgba(59,187,200,0.12), 0 0 10px rgba(59,187,200,0.18);
+}
+.reading-dot--warm {
+  background: #D97655;
+  box-shadow: 0 0 0 3px rgba(217,118,85,0.12), 0 0 10px rgba(217,118,85,0.18);
+}
 .reading-dot--hot  {
   background: #D44F6A;
+  box-shadow: 0 0 0 3px rgba(212,79,106,0.14), 0 0 12px rgba(212,79,106,0.22);
   animation: marker-bloom-pulse 3.2s ease-in-out infinite;
 }
 

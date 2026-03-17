@@ -12,11 +12,17 @@ from services import geoip, url_utils
 
 router = APIRouter()
 
-# Simple in-memory rate limiter: {ip_hash: [unix_timestamps]}
-# Max 5 submissions per IP per 60 seconds. Good enough for local dev.
+# Rate limiter: {ip_hash: [unix_timestamps]}
+# Max 5 submissions per IP per 60 seconds.
 _rate_store: dict[str, list[float]] = defaultdict(list)
-_RATE_LIMIT = 5
+_RATE_LIMIT  = 5
 _RATE_WINDOW = 60  # seconds
+
+# Domain dedupe window: {ip_hash: {domain: last_submit_time}}
+# Same IP can't submit the same domain within 10 minutes.
+# Prevents one person flooding the same site repeatedly.
+_domain_store: dict[str, dict[str, float]] = defaultdict(dict)
+_DOMAIN_WINDOW = 10 * 60  # 10 minutes
 
 
 class SubmitRequest(BaseModel):
@@ -38,11 +44,23 @@ def _hash_ip(ip: str) -> str:
 def _check_rate_limit(ip_hash: str) -> None:
     now = time.time()
     window_start = now - _RATE_WINDOW
-    # Keep only timestamps within the current window
     _rate_store[ip_hash] = [t for t in _rate_store[ip_hash] if t > window_start]
     if len(_rate_store[ip_hash]) >= _RATE_LIMIT:
-        raise HTTPException(status_code=429, detail="Too many submissions. Please wait a moment.")
+        raise HTTPException(status_code=429, detail="too many submissions. please wait a moment.")
     _rate_store[ip_hash].append(now)
+
+
+def _check_domain_dedupe(ip_hash: str, domain: str) -> None:
+    """Reject if same IP submitted the same domain within the dedupe window."""
+    now = time.time()
+    last = _domain_store[ip_hash].get(domain, 0)
+    if now - last < _DOMAIN_WINDOW:
+        remaining = int((_DOMAIN_WINDOW - (now - last)) / 60)
+        raise HTTPException(
+            status_code=429,
+            detail=f"you already shared from {domain} recently. try again in ~{remaining} min."
+        )
+    _domain_store[ip_hash][domain] = now
 
 
 @router.post("/submit")
@@ -60,6 +78,9 @@ async def submit(body: SubmitRequest, request: Request):
     # 3. Normalize URL and extract domain
     normalized = url_utils.normalize_url(body.url)
     domain = url_utils.extract_domain(normalized)
+
+    # 2b. Domain dedupe — prevent same IP flooding same site
+    _check_domain_dedupe(ip_hash, domain)
 
     # 4. GeoIP lookup (async, with localhost fallback)
     location = await geoip.lookup(client_ip)

@@ -168,8 +168,10 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
 
     // Cluster group — minimal flat blobs, numeric only
     const clusterGroup = (L as any).markerClusterGroup({
+      // At high zoom in dense cities, use a tighter radius so individual
+      // points separate out instead of staying merged into one blob
       maxClusterRadius: (zoom: number) =>
-        zoom < 4 ? 100 : zoom < 6 ? 70 : zoom < 8 ? 50 : 35,
+        zoom < 4 ? 100 : zoom < 6 ? 70 : zoom < 8 ? 50 : zoom < 11 ? 30 : 18,
       showCoverageOnHover: false,
       iconCreateFunction: (cluster: any) => {
         const count = cluster.getChildCount();
