@@ -125,13 +125,20 @@ export function ActivityFeed() {
     });
   }, [allCards, sort]);
 
-  // ── Final cards: city text filter, user's own URL excluded ──
+  // ── Final cards: city filter, user's own card pinned to top ──
   const cards = useMemo(() => {
     const q = cityQuery.trim().toLowerCase();
     let filtered = q
       ? sorted.filter((c) => c.cities.some((city) => city.name.toLowerCase().includes(q)))
       : sorted;
-    if (myUrl) filtered = filtered.filter((c) => c.url !== myUrl);
+    // Pin user's own card to top so they can see what they dropped
+    if (myUrl) {
+      const myIdx = filtered.findIndex((c) => c.url === myUrl);
+      if (myIdx > 0) {
+        const [mine] = filtered.splice(myIdx, 1);
+        filtered.unshift(mine);
+      }
+    }
     return filtered.slice(0, 30);
   }, [sorted, cityQuery, myUrl]);
 
@@ -199,6 +206,7 @@ export function ActivityFeed() {
         <div className="feed-list">
           {cards.map((card, i) => {
             const title     = titles[card.url];
+            const isMyCard  = card.url === myUrl;
             const isHovered = card.url === hoveredUrl;
             const citiesSorted = [...card.cities].sort((a, b) => b.count - a.count);
             const lead      = citiesSorted[0];
@@ -207,7 +215,7 @@ export function ActivityFeed() {
             return (
               <a
                 key={card.url}
-                className={`bubble-thread${isHovered ? " bubble-thread--hovered" : ""}`}
+                className={`bubble-thread${isMyCard ? " bubble-thread--mine" : ""}${isHovered ? " bubble-thread--hovered" : ""}`}
                 href={card.url}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -216,7 +224,8 @@ export function ActivityFeed() {
                 onMouseLeave={() => setHoveredUrl(null)}
                 style={{ animationDelay: `${i * 40}ms` }}
               >
-                <div className="bubble bubble--main">
+                {isMyCard && <div className="bubble-yours-label">your drop</div>}
+                <div className={`bubble bubble--main${isMyCard ? " bubble--mine" : ""}`}>
                   <div className="bubble-meta">
                     <img
                       src={`https://www.google.com/s2/favicons?domain=${card.domain}&sz=32`}

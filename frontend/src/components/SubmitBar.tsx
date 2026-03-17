@@ -157,15 +157,14 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
         setTimeout(() => useSubmissionsStore.getState().setUserPinId(null), 10 * 60 * 1000);
       }
 
-      // Set submission banner
-      if (metadata) {
-        useSubmissionsStore.getState().setSubmissionBanner({
-          favicon_url: metadata.favicon_url,
-          title: metadata.title,
-          domain: metadata.domain,
-          city: data.city ?? "",
-        });
-      }
+      // Set submission banner — use prefetched metadata if available, else fall back to API response
+      const bannerDomain = data.domain ?? metadata?.domain ?? new URL(trimmed).hostname.replace("www.", "");
+      useSubmissionsStore.getState().setSubmissionBanner({
+        favicon_url: metadata?.favicon_url ?? `https://www.google.com/s2/favicons?domain=${bannerDomain}&sz=32`,
+        title: metadata?.title ?? bannerDomain,
+        domain: bannerDomain,
+        city: data.city ?? "",
+      });
       // Track submitted URL for sidebar filter (10 min)
       useSubmissionsStore.getState().setUserSubmittedUrl(trimmed);
       setTimeout(() => useSubmissionsStore.getState().setUserSubmittedUrl(null), 10 * 60 * 1000);
