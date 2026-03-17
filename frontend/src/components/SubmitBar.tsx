@@ -231,6 +231,7 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
   return (
     <div className="submit-hero-wrapper">
       <div className="submit-hero-card">
+        <button className="submit-hero-dismiss" onClick={onFirstSubmit} aria-label="Dismiss">×</button>
         <p className="submit-hero-eyebrow">what are you reading right now?</p>
         <form onSubmit={handleSubmit} className="submit-hero-form">
           <input

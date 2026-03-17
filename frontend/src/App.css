@@ -579,8 +579,23 @@ html, body, #root {
   z-index: 900; pointer-events: none;
 }
 
+.submit-hero-dismiss {
+  position: absolute;
+  top: 12px; right: 14px;
+  background: none; border: none; padding: 4px 6px;
+  font-size: 16px; line-height: 1;
+  color: #C8C5D0;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: color 0.15s;
+}
+.submit-hero-dismiss:hover { color: #8886A0; }
+[data-theme="dark"] .submit-hero-dismiss { color: #3A3D52; }
+[data-theme="dark"] .submit-hero-dismiss:hover { color: #52506A; }
+
 .submit-hero-card {
   pointer-events: all;
+  position: relative; /* so dismiss button positions relative to card */
   width: 100%; max-width: 620px;
   padding: 40px 32px 34px;
   /* Glass — translucent, embedded in atmosphere */
@@ -917,6 +932,8 @@ html, body, #root {
   scrollbar-width: none;
   padding: 12px 14px 18px;
   display: flex; flex-direction: column; gap: 8px;
+  overscroll-behavior: contain; /* prevent scroll leaking to Leaflet map */
+  touch-action: pan-y;          /* enable touch scroll on mobile */
 }
 .feed-list::-webkit-scrollbar { display: none; }
 .feed-list::after {

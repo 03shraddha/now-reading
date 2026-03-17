@@ -39,6 +39,7 @@ interface FeedCard {
 
 export function ActivityFeed() {
   const submissions      = useSubmissionsStore((s) => s.submissions);
+  const mapBounds        = useSubmissionsStore((s) => s.mapBounds);
   const setFocusLocation = useSubmissionsStore((s) => s.setFocusLocation);
   const hoveredUrl       = useSubmissionsStore((s) => s.hoveredUrl);
   const setHoveredUrl    = useSubmissionsStore((s) => s.setHoveredUrl);
@@ -52,11 +53,24 @@ export function ActivityFeed() {
   const userSubmittedUrl = useSubmissionsStore((s) => s.userSubmittedUrl);
   const myUrl = userSubmittedUrl;
 
+  // ── Viewport filter — show reads from the current map view ───
+  const inBoundsSubmissions = useMemo(() => {
+    if (!mapBounds) return submissions;
+    const filtered = new Map();
+    for (const [id, sub] of submissions) {
+      if (
+        sub.lat >= mapBounds.south && sub.lat <= mapBounds.north &&
+        sub.lng >= mapBounds.west  && sub.lng <= mapBounds.east
+      ) filtered.set(id, sub);
+    }
+    return filtered;
+  }, [submissions, mapBounds]);
+
   // ── Group by URL ───────────────────────────────────────────
   const allCards: FeedCard[] = useMemo(() => {
     const map = new Map<string, FeedCard>();
 
-    for (const sub of submissions.values()) {
+    for (const sub of inBoundsSubmissions.values()) {
       const entry = map.get(sub.url);
       const city  = { name: sub.city, flag: countryFlag(sub.country_code), count: sub.count };
 
@@ -79,7 +93,20 @@ export function ActivityFeed() {
     }
 
     return Array.from(map.values());
-  }, [submissions]);
+  }, [inBoundsSubmissions]);
+
+  // ── Dominant region for header ────────────────────────────
+  const regionName = useMemo(() => {
+    const cityCount = new Map<string, number>();
+    for (const card of allCards) {
+      for (const c of card.cities) cityCount.set(c.name, (cityCount.get(c.name) ?? 0) + c.count);
+    }
+    let top = "", topCount = 0;
+    for (const [city, count] of cityCount) {
+      if (count > topCount) { top = city; topCount = count; }
+    }
+    return top || null;
+  }, [allCards]);
 
   // Reset sort to "recent" when feed has fewer than 2 cards (sort is meaningless)
   useEffect(() => {
@@ -135,7 +162,9 @@ export function ActivityFeed() {
       {/* Header */}
       <div className="feed-header">
         <div className="feed-header-top">
-          <span className="feed-title">recent reads</span>
+          <span className="feed-title">
+            {regionName ? `top reads in ${regionName}` : "recent reads"}
+          </span>
           <span className="feed-count" title="unique links in view">
             {cards.length} {cards.length === 1 ? "link" : "links"}
           </span>
