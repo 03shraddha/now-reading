@@ -537,8 +537,6 @@ html, body, #root {
 }
 .popup-header {
   display: flex; align-items: center; gap: 7px; margin-bottom: 5px;
-  /* leave room for the Leaflet × button (≈28px) */
-  padding-right: 22px;
   overflow: hidden;
 }
 .popup-favicon { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
@@ -571,12 +569,21 @@ html, body, #root {
 @media (max-width: 639px) {
   .map-popup { min-width: auto; max-width: min(240px, calc(100vw - 64px)); }
   .leaflet-popup-content-wrapper { max-height: 55vh; overflow-y: auto; }
-  /* Bigger close button for thumb taps */
+  /* Close button: float just outside the top-right corner, never overlaps content */
   .leaflet-popup-close-button {
-    font-size: 22px !important;
-    top: 8px !important; right: 10px !important;
-    width: 36px !important; height: 36px !important;
+    font-size: 16px !important;
+    top: -10px !important; right: -10px !important;
+    width: 28px !important; height: 28px !important;
+    background: #fff !important;
+    border-radius: 50% !important;
+    border: 1px solid rgba(200,195,185,0.6) !important;
     display: flex !important; align-items: center !important; justify-content: center !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.12) !important;
+    line-height: 1 !important;
+  }
+  [data-theme="dark"] .leaflet-popup-close-button {
+    background: #1a1d28 !important;
+    border-color: rgba(50,54,74,0.8) !important;
   }
 }
 
