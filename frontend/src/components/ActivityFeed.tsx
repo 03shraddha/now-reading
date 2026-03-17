@@ -108,9 +108,12 @@ export function ActivityFeed() {
           const overflow    = card.cities.length - shownCities.length;
 
           return (
-            <button
+            <a
               key={card.url}
               className="feed-item"
+              href={card.url}
+              target="_blank"
+              rel="noopener noreferrer"
               onClick={() => setFocusLocation([card.lat, card.lng])}
             >
               {/* Top: favicon + domain + timestamp */}
@@ -150,7 +153,7 @@ export function ActivityFeed() {
                   <span className="feed-badge">{card.totalCount}</span>
                 )}
               </div>
-            </button>
+            </a>
           );
         })}
       </div>

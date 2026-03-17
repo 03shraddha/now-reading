@@ -630,6 +630,7 @@ html, body, #root {
   display: flex; flex-direction: column; gap: 10px;
   width: 100%; padding: 15px 16px 13px;
   text-align: left; color: inherit; cursor: pointer;
+  text-decoration: none;
 
   /* Manga paper with subtle gradient — the scene's background */
   background: linear-gradient(138deg, #FAFAF8 0%, #F6F1F8 100%);
