@@ -1,0 +1,34 @@
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Firebase service account keys — NEVER commit these
+*.json
+!frontend/tsconfig*.json
+!frontend/package*.json
+!frontend/eslint.config.js
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+venv/
+.venv/
+
+# Node / Vite
+frontend/node_modules/
+frontend/dist/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/

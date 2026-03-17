@@ -1,0 +1,91 @@
+/* ── Base design tokens ───────────────────────────────────── */
+:root {
+  /* Anime palette — dark mode (default) */
+  --bg-base:   #0C0D12;
+  --bg-panel:  #14151D;
+  --bg-raised: #1C1E2A;
+  --bg-hover:  #222436;
+
+  --stroke-0: #2A2D3E;
+  --stroke-1: #3A3D52;
+
+  --text-0: #EAE8F2;
+  --text-1: #8E8CA0;
+  --text-2: #565468;
+
+  --accent:      #7B6CF6;
+  --accent-dim:  rgba(123, 108, 246, 0.14);
+  --warm:        #E07B5F;
+  --warm-dim:    rgba(224, 123, 95, 0.14);
+  --cool:        #5AC8D8;
+  --cool-dim:    rgba(90, 200, 216, 0.14);
+  --hot:         #E0546A;
+  --hot-dim:     rgba(224, 84, 106, 0.14);
+  --success:     #60C4A0;
+
+  --sans:    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono:    ui-monospace, "Cascadia Code", Consolas, monospace;
+
+  font: 14px/150% var(--sans);
+  letter-spacing: 0.01em;
+  color-scheme: dark;
+  color: var(--text-1);
+  background: var(--bg-base);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body { margin: 0; }
+
+h1, h2 {
+  font-family: var(--sans);
+  font-weight: 600;
+  color: var(--text-0);
+}
+
+h1 { font-size: 48px; letter-spacing: -1.5px; margin: 28px 0; }
+h2 { font-size: 22px; letter-spacing: -0.3px; margin: 0 0 6px; }
+p  { margin: 0; }
+
+code {
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 135%;
+  padding: 3px 7px;
+  background: var(--bg-raised);
+  border: 1px solid var(--stroke-0);
+  border-radius: 4px;
+  color: var(--text-0);
+  display: inline-flex;
+}
+
+/* Light mode token overrides */
+[data-theme="light"] {
+  --bg-base:   #EDEBE4;
+  --bg-panel:  #F5F3EE;
+  --bg-raised: #FAFAF7;
+  --bg-hover:  #EDEAE2;
+
+  --stroke-0: #D8D5CB;
+  --stroke-1: #C8C5BB;
+
+  --text-0: #1A1820;
+  --text-1: #6B6A7A;
+  --text-2: #A09DAE;
+
+  --accent:     #5A48E0;
+  --accent-dim: rgba(90, 72, 224, 0.1);
+  --warm:       #C85E3A;
+  --warm-dim:   rgba(200, 94, 58, 0.1);
+  --cool:       #2EAEC0;
+  --cool-dim:   rgba(46, 174, 192, 0.1);
+  --hot:        #C03050;
+  --hot-dim:    rgba(192, 48, 80, 0.1);
+  --success:    #48B891;
+
+  color: var(--text-1);
+  background: var(--bg-base);
+  color-scheme: light;
+}
