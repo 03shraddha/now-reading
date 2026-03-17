@@ -197,6 +197,8 @@ html, body, #root {
 .map-container .leaflet-container {
   height: 100%;
   width: 100%;
+  /* Eliminate 300ms tap delay and prevent browser double-tap-zoom stealing taps */
+  touch-action: manipulation;
   /* Match CARTO Positron ocean colour so viewport edges beyond tiles are seamless */
   background: #a6d5e8;
 }
@@ -344,6 +346,13 @@ html, body, #root {
   height: 100%;
   border-radius: 50%;
   transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+}
+/* Invisible hit-area padding so small dots are easier to tap on mobile */
+.reading-dot::after {
+  content: "";
+  position: absolute;
+  inset: -14px;
 }
 
 /* Soft halo = visual cue that location is IP-approximate, not exact */

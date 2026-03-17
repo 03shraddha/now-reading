@@ -81,25 +81,18 @@ function isRecent(sub: Submission): boolean {
 
 // ── Rich popup HTML ────────────────────────────────────────────
 
-async function buildRichPopup(sub: Submission): Promise<string> {
-  let meta: { title: string; description: string | null; domain: string; favicon_url: string } = {
-    title: sub.title || sub.domain,
-    description: null,
-    domain: sub.domain,
-    favicon_url: `https://www.google.com/s2/favicons?domain=${sub.domain}&sz=32`,
-  };
-  try {
-    const resp = await fetch(apiUrl(`/api/metadata?url=${encodeURIComponent(sub.url)}`));
-    if (resp.ok) meta = await resp.json();
-  } catch {}
+// Synchronous — uses data already stored in Firestore, no network call.
+// Removing the async fetch eliminates the delay that caused "tap does nothing" on mobile.
+function buildRichPopup(sub: Submission): string {
+  const title   = sub.title || sub.domain;
+  const favicon = sub.favicon_url || `https://www.google.com/s2/favicons?domain=${sub.domain}&sz=32`;
 
   return `<div class="map-popup">
     <div class="popup-header">
-      <img src="${meta.favicon_url}" class="popup-favicon" onerror="this.style.display='none'" />
-      <div class="popup-domain">${meta.domain}</div>
+      <img src="${favicon}" class="popup-favicon" onerror="this.style.display='none'" />
+      <div class="popup-domain">${sub.domain}</div>
     </div>
-    <div class="popup-title">${meta.title}</div>
-    ${meta.description ? `<div class="popup-desc">${meta.description}</div>` : ""}
+    <div class="popup-title">${title}</div>
     <div class="popup-meta">
       <span class="popup-city">${sub.city}, ${sub.country}</span>
       <span class="popup-count">${sub.count} reading</span>
@@ -335,9 +328,8 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
         const marker = L.marker([sub.lat, sub.lng], {
           icon: isUserPin ? makeUserPinIcon() : makeDotIcon(sub.count, isRecent(sub)),
         });
-        marker.on("click", async () => {
-          const html = await buildRichPopup(sub);
-          marker.bindPopup(html, {
+        marker.on("click", () => {
+          marker.bindPopup(buildRichPopup(sub), {
             offset: id === userPinIdRef.current ? [0, -40] : [0, 0],
           }).openPopup();
         });
@@ -368,9 +360,8 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
           existing.setIcon(makeDotIcon(sub.count, false));
         }
         existing.off("click");
-        existing.on("click", async () => {
-          const html = await buildRichPopup(sub);
-          existing.bindPopup(html, {
+        existing.on("click", () => {
+          existing.bindPopup(buildRichPopup(sub), {
             offset: id === userPinIdRef.current ? [0, -40] : [0, 0],
           }).openPopup();
         });
