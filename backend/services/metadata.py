@@ -123,28 +123,42 @@ def _first_match(html: str, pattern: str) -> str | None:
 
 
 # Date-like segments to skip when extracting slug title (YYYY, YYYY-MM-DD, etc.)
-_DATE_RE = re.compile(r'^\d{4}(-\d{2}(-\d{2})?)?$')
+_DATE_RE    = re.compile(r'^\d{4}(-\d{2}(-\d{2})?)?$')
+# Trailing hash ID appended by platforms like Medium: "-abc123def456" (8-16 hex/alnum chars)
+_HASH_RE    = re.compile(r'-[0-9a-f]{8,16}$', re.I)
+# Segments that are entirely hex (CMS content IDs, UUIDs, etc.)
+_ALL_HEX_RE = re.compile(r'^[0-9a-f\-]{8,}$', re.I)
+
 
 def _title_from_url(url: str) -> str | None:
     """
     Extract a human-readable title from the URL slug as a last-resort fallback.
     e.g. /leaders/2026/03/12/chinas-hereditary-elite-is-taking-shape
          -> "Chinas Hereditary Elite Is Taking Shape"
+    e.g. /@john/my-great-article-abc123def456  (Medium)
+         -> "My Great Article"
     Returns None if no meaningful slug is found.
     """
     path = urlparse(url).path.rstrip("/")
     segments = [s for s in path.split("/") if s]
 
-    # Find the last segment that looks like a readable slug (not a date, not a bare ID)
     for seg in reversed(segments):
-        if _DATE_RE.match(seg):
+        if seg.startswith("@"):        # @username segment → skip
             continue
-        if re.match(r'^\d+$', seg):   # pure numeric ID → skip
+        if _DATE_RE.match(seg):        # date component → skip
+            continue
+        if re.match(r'^\d+$', seg):    # pure numeric ID → skip
+            continue
+        if _ALL_HEX_RE.match(seg):     # UUID / pure hex ID → skip
             continue
         if len(seg) < 6:               # too short to be meaningful
             continue
-        # Replace hyphens/underscores with spaces and title-case
-        title = seg.replace("-", " ").replace("_", " ").title()
-        return title
+
+        # Strip trailing platform hash ID (e.g. Medium's "-abc123def456")
+        clean = _HASH_RE.sub("", seg)
+        if len(clean) < 4:             # stripping left nothing useful
+            continue
+
+        return clean.replace("-", " ").replace("_", " ").title()
 
     return None
