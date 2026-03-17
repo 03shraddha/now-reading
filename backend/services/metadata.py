@@ -56,7 +56,8 @@ async def fetch_metadata(url: str) -> dict:
     parsed = urlparse(url)
     domain = (parsed.netloc or "").replace("www.", "")
     favicon_url = f"https://www.google.com/s2/favicons?domain={domain}&sz=32"
-    fallback = {"title": domain, "description": None, "domain": domain, "favicon_url": favicon_url}
+    slug_title = _title_from_url(url)  # last-resort: readable slug from URL path
+    fallback = {"title": slug_title or domain, "description": None, "domain": domain, "favicon_url": favicon_url}
 
     # SSRF guard — resolve hostname before any HTTP I/O (not cached; no real attempt made)
     if _resolves_to_private(parsed.hostname or ""):
@@ -88,11 +89,16 @@ async def fetch_metadata(url: str) -> dict:
     except Exception:
         return fallback
 
-    title = (
+    scraped_title = (
         _first_match(html, r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\']([^"\']+)["\']')
         or _first_match(html, r'<title[^>]*>([^<]+)</title>')
-        or domain
     )
+    # Discard bot-challenge/error page titles that aren't real article titles
+    _JUNK_TITLES = {"just a moment", "access denied", "403 forbidden", "404 not found",
+                    "please wait", "checking your browser", "attention required"}
+    if scraped_title and scraped_title.strip().lower() in _JUNK_TITLES:
+        scraped_title = None
+    title = scraped_title or slug_title or domain
     description = (
         _first_match(html, r'<meta[^>]+property=["\']og:description["\'][^>]+content=["\']([^"\']+)["\']')
         or _first_match(html, r'<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\']+)["\']')
@@ -114,3 +120,31 @@ async def fetch_metadata(url: str) -> dict:
 def _first_match(html: str, pattern: str) -> str | None:
     m = re.search(pattern, html, re.I | re.S)
     return m.group(1) if m else None
+
+
+# Date-like segments to skip when extracting slug title (YYYY, YYYY-MM-DD, etc.)
+_DATE_RE = re.compile(r'^\d{4}(-\d{2}(-\d{2})?)?$')
+
+def _title_from_url(url: str) -> str | None:
+    """
+    Extract a human-readable title from the URL slug as a last-resort fallback.
+    e.g. /leaders/2026/03/12/chinas-hereditary-elite-is-taking-shape
+         -> "Chinas Hereditary Elite Is Taking Shape"
+    Returns None if no meaningful slug is found.
+    """
+    path = urlparse(url).path.rstrip("/")
+    segments = [s for s in path.split("/") if s]
+
+    # Find the last segment that looks like a readable slug (not a date, not a bare ID)
+    for seg in reversed(segments):
+        if _DATE_RE.match(seg):
+            continue
+        if re.match(r'^\d+$', seg):   # pure numeric ID → skip
+            continue
+        if len(seg) < 6:               # too short to be meaningful
+            continue
+        # Replace hyphens/underscores with spaces and title-case
+        title = seg.replace("-", " ").replace("_", " ").title()
+        return title
+
+    return None
