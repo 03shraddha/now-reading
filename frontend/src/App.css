@@ -793,12 +793,12 @@ html, body, #root {
 }
 .submit-identity-input {
   flex: 1; min-width: 0;
-  background: transparent; border: none; border-bottom: 1px solid rgba(106,90,249,0.18); outline: none;
+  background: rgba(106,90,249,0.05); border: 1px solid rgba(106,90,249,0.15); border-radius: 8px; outline: none;
   font-size: 13px; font-weight: 400; color: #1A1820; font-family: inherit;
-  padding: 4px 2px; transition: border-color 0.2s;
+  padding: 7px 10px; transition: border-color 0.2s;
 }
-.submit-identity-input::placeholder { color: #C0BDC8; }
-.submit-identity-input:focus { border-bottom-color: #6A5AF9; }
+.submit-identity-input::placeholder { color: #B0ADBC; }
+.submit-identity-input:focus { border-color: #6A5AF9; background: rgba(106,90,249,0.08); }
 [data-theme="dark"] .submit-identity-input { color: #E8E6F2; border-bottom-color: rgba(123,108,246,0.25); }
 [data-theme="dark"] .submit-identity-input::placeholder { color: #52506A; }
 [data-theme="dark"] .submit-identity-input:focus { border-bottom-color: #7B6CF6; }

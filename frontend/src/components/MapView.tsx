@@ -1,6 +1,5 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import L from "leaflet";
-import { apiUrl } from "../lib/api";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
@@ -333,7 +332,8 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
         const marker = L.marker([sub.lat, sub.lng], {
           icon: isUserPin ? makeUserPinIcon() : makeDotIcon(sub.count, isRecent(sub)),
         });
-        marker.on("click", () => {
+        marker.on("click", (e) => {
+          L.DomEvent.stopPropagation(e);
           marker.bindPopup(buildRichPopup(sub), {
             offset: id === userPinIdRef.current ? [0, -40] : [0, 0],
           }).openPopup();
@@ -365,7 +365,8 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
           existing.setIcon(makeDotIcon(sub.count, false));
         }
         existing.off("click");
-        existing.on("click", () => {
+        existing.on("click", (e) => {
+          L.DomEvent.stopPropagation(e);
           existing.bindPopup(buildRichPopup(sub), {
             offset: id === userPinIdRef.current ? [0, -40] : [0, 0],
           }).openPopup();
