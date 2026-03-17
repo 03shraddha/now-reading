@@ -1617,7 +1617,12 @@ html, body, #root {
 
   /* Increase tiny font sizes to 14px minimum on mobile */
   .popup-domain, .feed-sort-tab, .bubble-time, .bubble-count,
-  .feed-city-input, .popup-city, .popup-count { font-size: 14px; }
+  .popup-city, .popup-count { font-size: 14px; }
+
+  /* Force 16px on all inputs to prevent iOS Safari auto-zoom on focus */
+  input, .feed-city-input, .submit-hero-input, .submit-mini-input {
+    font-size: 16px !important;
+  }
 
   /* ── Disable parallax transforms on mobile ── */
   .world-sky,
