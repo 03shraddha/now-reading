@@ -13,8 +13,8 @@ import type { Submission } from "../types";
 // Track which submission each marker represents, for hover highlighting
 const markerUrlMap = new Map<L.Marker, string>(); // marker → url
 
-const INDIA_CENTER: L.LatLngTuple = [20.5937, 78.9629];
-const DEFAULT_ZOOM = 5;
+const WORLD_CENTER: L.LatLngTuple = [20, 10];
+const DEFAULT_ZOOM = 2;
 
 // ── Icon helpers ───────────────────────────────────────────────
 // Scale = SIZE only, not color noise (PRD requirement)
@@ -195,7 +195,7 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
 
     const mapEl = containerRef.current;
     const map = L.map(mapEl, {
-      center: INDIA_CENTER,
+      center: WORLD_CENTER,
       zoom: DEFAULT_ZOOM,
       zoomControl: true,
     });
