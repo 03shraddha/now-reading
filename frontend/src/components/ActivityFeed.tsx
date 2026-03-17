@@ -62,6 +62,42 @@ export function ActivityFeed() {
   const sheetRef = useRef<HTMLDivElement>(null);
   const dragRef  = useRef<{ startY: number; startH: number } | null>(null);
 
+  // ── Swipe-to-dismiss drawer (mobile only) ────────────────────
+  const swipeRef = useRef<{ startX: number; startY: number; locked: boolean } | null>(null);
+
+  function onDrawerTouchStart(e: React.TouchEvent) {
+    if (window.innerWidth >= 640) return;
+    swipeRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, locked: false };
+  }
+
+  function onDrawerTouchMove(e: React.TouchEvent) {
+    if (!swipeRef.current || !sheetRef.current || window.innerWidth >= 640) return;
+    const dx = e.touches[0].clientX - swipeRef.current.startX;
+    const dy = e.touches[0].clientY - swipeRef.current.startY;
+    // Lock direction on first significant movement
+    if (!swipeRef.current.locked) {
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return; // not yet moved enough to decide
+      swipeRef.current.locked = true;
+      // If more vertical than horizontal, let native scroll handle it
+      if (Math.abs(dy) > Math.abs(dx)) { swipeRef.current = null; return; }
+    }
+    // Horizontal swipe right → translate drawer
+    if (dx > 0) {
+      e.preventDefault(); // prevent scroll while swiping drawer
+      sheetRef.current.style.transition = "none";
+      sheetRef.current.style.transform  = `translateX(${dx}px)`;
+    }
+  }
+
+  function onDrawerTouchEnd(e: React.TouchEvent) {
+    if (!swipeRef.current || !sheetRef.current || window.innerWidth >= 640) return;
+    const dx = e.changedTouches[0].clientX - swipeRef.current.startX;
+    swipeRef.current = null;
+    sheetRef.current.style.transition = "";  // restore CSS transition
+    sheetRef.current.style.transform  = "";  // let CSS class control position
+    if (dx > 80) setMobileSheetOpen(false);  // swiped far enough → close
+  }
+
   function getFullH() { return Math.round(window.innerHeight * FULL_VH); }
 
   function snapSheet(currentH: number) {
@@ -220,7 +256,13 @@ export function ActivityFeed() {
     {mobileSheetOpen && (
       <div className="feed-mobile-backdrop" onClick={() => setMobileSheetOpen(false)} />
     )}
-    <div className="activity-feed" ref={sheetRef}>
+    <div
+      className="activity-feed"
+      ref={sheetRef}
+      onTouchStart={onDrawerTouchStart}
+      onTouchMove={onDrawerTouchMove}
+      onTouchEnd={onDrawerTouchEnd}
+    >
       {/* Header — tap to toggle, drag to resize */}
       <div
         className="feed-header"
