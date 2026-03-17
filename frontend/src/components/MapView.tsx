@@ -83,7 +83,7 @@ function isRecent(sub: Submission): boolean {
 
 async function buildRichPopup(sub: Submission): Promise<string> {
   let meta: { title: string; description: string | null; domain: string; favicon_url: string } = {
-    title: sub.domain,
+    title: sub.title || sub.domain,
     description: null,
     domain: sub.domain,
     favicon_url: `https://www.google.com/s2/favicons?domain=${sub.domain}&sz=32`,

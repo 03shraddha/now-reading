@@ -323,7 +323,9 @@ export function ActivityFeed() {
         <div className="feed-list">
           {cards.map((card, i) => {
             // Prefer stored title from Firestore, fall back to API fetch, then domain
-            const title     = card.title || titles[card.url] || card.domain;
+            // Skip stored title if it's just the domain (metadata failed at submission time)
+            const storedTitle = card.title !== card.domain ? card.title : null;
+            const title       = storedTitle || titles[card.url] || card.domain;
             const isMyCard  = card.url === myUrl;
             const isHovered = card.url === hoveredUrl;
             const citiesSorted = [...card.cities].sort((a, b) => b.count - a.count);
