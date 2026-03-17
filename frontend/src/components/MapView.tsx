@@ -36,7 +36,7 @@ function makeUserPinIcon() {
   return L.divIcon({
     className: "",
     html: `<div class="user-pin-wrapper">
-      <div class="user-pin-label">your drop</div>
+      <div class="user-pin-label">your pin</div>
       <div class="reading-dot reading-dot--user"></div>
     </div>`,
     iconSize:   [72, 52],
@@ -51,7 +51,7 @@ function buildUserDropPopupHtml(sub: Submission): string {
   const favicon   = banner?.favicon_url ?? `https://www.google.com/s2/favicons?domain=${sub.domain}&sz=32`;
   const city      = banner?.city      ?? sub.city;
   return `<div class="user-drop-popup">
-    <div class="user-drop-popup__label">your drop</div>
+    <div class="user-drop-popup__label">your pin</div>
     <div class="user-drop-popup__header">
       <img src="${favicon}" class="user-drop-popup__favicon" onerror="this.style.display='none'" />
       <span class="user-drop-popup__domain">${sub.domain}</span>
@@ -333,14 +333,10 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
           icon: isUserPin ? makeUserPinIcon() : makeDotIcon(sub.count, isRecent(sub)),
         });
         marker.on("click", async () => {
-          if (id === userPinIdRef.current) {
-            marker.bindPopup(buildUserDropPopupHtml(sub), {
-              className: "user-drop-leaflet-popup", closeButton: true, offset: [0, -14],
-            }).openPopup();
-          } else {
-            const html = await buildRichPopup(sub);
-            marker.bindPopup(html).openPopup();
-          }
+          const html = await buildRichPopup(sub);
+          marker.bindPopup(html, {
+            offset: id === userPinIdRef.current ? [0, -40] : [0, 0],
+          }).openPopup();
         });
         marker.on("mouseover", () => setHoveredUrl(sub.url));
         marker.on("mouseout",  () => setHoveredUrl(null));
@@ -370,14 +366,10 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
         }
         existing.off("click");
         existing.on("click", async () => {
-          if (id === userPinIdRef.current) {
-            existing.bindPopup(buildUserDropPopupHtml(sub), {
-              className: "user-drop-leaflet-popup", closeButton: true, offset: [0, -14],
-            }).openPopup();
-          } else {
-            const html = await buildRichPopup(sub);
-            existing.bindPopup(html).openPopup();
-          }
+          const html = await buildRichPopup(sub);
+          existing.bindPopup(html, {
+            offset: id === userPinIdRef.current ? [0, -40] : [0, 0],
+          }).openPopup();
         });
       }
     }

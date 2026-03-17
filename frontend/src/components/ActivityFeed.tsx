@@ -222,7 +222,7 @@ export function ActivityFeed() {
                 onMouseLeave={() => setHoveredUrl(null)}
                 style={{ animationDelay: `${i * 40}ms` }}
               >
-                {isMyCard && <div className="bubble-yours-label">your drop</div>}
+                {isMyCard && <div className="bubble-yours-label">your pin</div>}
                 <div className={`bubble bubble--main${isMyCard ? " bubble--mine" : ""}`}>
                   <div className="bubble-meta">
                     <img

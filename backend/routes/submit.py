@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from google.cloud.firestore_v1 import SERVER_TIMESTAMP, Increment
 
 from firebase_client import get_db
-from services import geoip, url_utils
+from services import geoip, url_utils, moderation
 
 router = APIRouter()
 
@@ -169,6 +169,10 @@ async def submit(
     is_valid, error = url_utils.validate_url(body.url)
     if not is_valid:
         raise HTTPException(status_code=400, detail=error)
+
+    # 1b. Domain blocklist + Safe Browsing API check
+    moderation.check_domain_blocklist(body.url)
+    await moderation.check_safe_browsing(body.url)
 
     # 2. Rate limit by hashed IP
     client_ip = request.client.host if request.client else ""
