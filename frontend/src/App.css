@@ -815,17 +815,19 @@ html, body, #root {
 }
 
 .feed-header-top {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; gap: 8px;
 }
 
 .feed-title {
   font-size: 13px; font-weight: 700; color: #A09DAE;
   text-transform: uppercase; letter-spacing: 0.12em;
+  flex: 1; min-width: 0; /* shrink title, not badge */
 }
 .feed-count {
   font-size: 13px; font-weight: 700; color: #6A5AF9;
   background: rgba(106,90,249,0.1); border: 1px solid rgba(106,90,249,0.18);
   padding: 2px 10px; border-radius: 20px; font-variant-numeric: tabular-nums;
+  white-space: nowrap; flex-shrink: 0; /* never wrap */
 }
 
 /* Sort tabs */
@@ -1722,23 +1724,44 @@ html, body, #root {
   }
   .feed-header::before { display: none; } /* no drag pill */
 
+  /* ── Compact feed for the narrow drawer ── */
+  .feed-header { padding: 10px 12px 8px; }
+
+  /* Header top row: title shrinks, badge + × stay on one line */
+  .feed-header-top { gap: 6px; }
+  .feed-title { font-size: 11px; letter-spacing: 0.08em; }
+  .feed-count { font-size: 11px; padding: 2px 8px; white-space: nowrap; flex-shrink: 0; }
+  .feed-close-btn { font-size: 18px; flex-shrink: 0; }
+
+  /* Sort tabs */
+  .feed-sort-tabs { gap: 4px; margin-top: 2px; }
+  .feed-sort-tab { font-size: 11px; padding: 4px 10px; }
+
+  /* City filter input */
+  .feed-city-input-wrap { margin-top: 6px; }
+  .feed-city-input { font-size: 13px !important; padding: 7px 12px; }
+
+  /* Cards */
   .feed-list {
-    padding: 6px 12px calc(env(safe-area-inset-bottom, 0px) + 80px);
+    padding: 4px 8px calc(env(safe-area-inset-bottom, 0px) + 16px);
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    gap: 6px;
   }
-
-  .feed-item {
-    padding: 10px 12px;
-  }
-
-  .feed-domain {
-    font-size: 14px;
-  }
+  .bubble-thread { padding: 0; }
+  .bubble--main { padding: 10px 12px; }
+  .bubble-meta { gap: 6px; margin-bottom: 4px; }
+  .bubble-favicon { width: 14px; height: 14px; }
+  .bubble-domain { font-size: 11px; }
+  .bubble-time { font-size: 11px; }
+  .bubble-title { font-size: 13px; line-height: 1.35; }
+  .bubble-city { font-size: 12px; margin-top: 4px; }
+  .bubble-count { font-size: 11px; padding: 1px 6px; }
+  .bubble--reply { padding: 5px 12px; }
+  .bubble-reply-city { font-size: 11px; }
 
   /* Increase tiny font sizes to 14px minimum on mobile */
-  .popup-domain, .feed-sort-tab, .bubble-time, .bubble-count,
-  .popup-city, .popup-count { font-size: 14px; }
+  .popup-domain, .popup-city, .popup-count { font-size: 14px; }
 
   /* Force 16px on all inputs to prevent iOS Safari auto-zoom on focus */
   input, .feed-city-input, .submit-hero-input, .submit-mini-input {
