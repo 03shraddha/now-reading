@@ -562,7 +562,11 @@ html, body, #root {
   display: flex; align-items: center;
   margin-bottom: 8px;
 }
-.popup-city  { font-size: 11px; color: #A09DAE; white-space: nowrap; }
+.popup-city  { font-size: 11px; color: #A09DAE; }
+.popup-attribution { font-size: 11px; color: #6A5AF9; opacity: 0.8; text-decoration: none; }
+.popup-attribution:hover { opacity: 1; text-decoration: underline; }
+.popup-attribution--name { cursor: default; }
+.popup-attribution--name:hover { text-decoration: none; }
 .popup-count { display: none; }
 .popup-link {
   display: flex; align-items: center; justify-content: center;
@@ -780,6 +784,23 @@ html, body, #root {
 .submit-mini-btn:hover:not(:disabled)  { opacity: 0.88; }
 .submit-mini-btn:active:not(:disabled) { transform: scale(0.93); }
 .submit-mini-btn:disabled { opacity: 0.28; cursor: not-allowed; }
+
+/* Identity fields (name + twitter) — shown below URL in both hero and mini */
+.submit-identity-row {
+  display: flex; gap: 8px; width: 100%;
+  margin-top: 8px;
+}
+.submit-identity-input {
+  flex: 1; min-width: 0;
+  background: transparent; border: none; border-bottom: 1px solid rgba(106,90,249,0.18); outline: none;
+  font-size: 13px; font-weight: 400; color: #1A1820; font-family: inherit;
+  padding: 4px 2px; transition: border-color 0.2s;
+}
+.submit-identity-input::placeholder { color: #C0BDC8; }
+.submit-identity-input:focus { border-bottom-color: #6A5AF9; }
+[data-theme="dark"] .submit-identity-input { color: #E8E6F2; border-bottom-color: rgba(123,108,246,0.25); }
+[data-theme="dark"] .submit-identity-input::placeholder { color: #52506A; }
+[data-theme="dark"] .submit-identity-input:focus { border-bottom-color: #7B6CF6; }
 
 /* Mobile prompt — hidden on desktop */
 .submit-mini-prompt { display: none; }
@@ -1123,7 +1144,17 @@ html, body, #root {
 .bubble-city {
   display: flex; align-items: center; gap: 5px;
   font-size: 13px; font-weight: 500; color: #6A5AF9;
+  flex-wrap: wrap;
 }
+
+.bubble-attribution {
+  font-size: 0.78rem; font-weight: 400;
+  color: #6A5AF9; opacity: 0.7;
+  text-decoration: none;
+}
+.bubble-attribution:hover { opacity: 1; text-decoration: underline; }
+.bubble-attribution--name { cursor: default; }
+.bubble-attribution--name:hover { text-decoration: none; }
 
 .bubble-count {
   font-size: 12px; font-weight: 700; color: #D97655;

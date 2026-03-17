@@ -86,6 +86,11 @@ function isRecent(sub: Submission): boolean {
 function buildRichPopup(sub: Submission): string {
   const title   = sub.title || sub.domain;
   const favicon = sub.favicon_url || `https://www.google.com/s2/favicons?domain=${sub.domain}&sz=32`;
+  const attribution = sub.twitter_handle
+    ? ` · <a href="https://twitter.com/${sub.twitter_handle}" target="_blank" rel="noopener noreferrer" class="popup-attribution">@${sub.twitter_handle}</a>`
+    : sub.display_name
+      ? ` · <span class="popup-attribution popup-attribution--name">${sub.display_name}</span>`
+      : "";
 
   return `<div class="map-popup">
     <div class="popup-header">
@@ -94,7 +99,7 @@ function buildRichPopup(sub: Submission): string {
     </div>
     <div class="popup-title">${title}</div>
     <div class="popup-meta">
-      <span class="popup-city">${sub.city}, ${sub.country}</span>
+      <span class="popup-city">${sub.city}, ${sub.country}${attribution}</span>
       <span class="popup-count">${sub.count} reading</span>
     </div>
     <a href="${sub.url}" target="_blank" rel="noopener noreferrer" class="popup-link">Open →</a>

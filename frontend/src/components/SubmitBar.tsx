@@ -26,6 +26,16 @@ interface Props {
   heroText: string;
 }
 
+// ── Identity persistence ──────────────────────────────────────────────────
+const IDENTITY_KEY = "globalmap_identity";
+function loadIdentity(): { displayName: string; twitterHandle: string } {
+  try { return { displayName: "", twitterHandle: "", ...JSON.parse(localStorage.getItem(IDENTITY_KEY) || "{}") }; }
+  catch { return { displayName: "", twitterHandle: "" }; }
+}
+function saveIdentity(displayName: string, twitterHandle: string) {
+  localStorage.setItem(IDENTITY_KEY, JSON.stringify({ displayName, twitterHandle }));
+}
+
 // Returns true when the response is HTML — Render's cold-start wake-up page
 async function isColdStart(res: Response): Promise<boolean> {
   const ct = res.headers.get("content-type") ?? "";
@@ -68,6 +78,8 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
   const [status, setStatus] = useState<"idle" | "previewing" | "loading" | "success" | "error" | "waking">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [_submitCount, setSubmitCount] = useState(1);
+  const [displayName,   setDisplayName]   = useState(() => loadIdentity().displayName);
+  const [twitterHandle, setTwitterHandle] = useState(() => loadIdentity().twitterHandle);
   const [metadata, setMetadata] = useState<Metadata | null>(null);
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const debounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -121,6 +133,11 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
     };
   }, [url]); // intentionally omit status to avoid re-running on status changes
 
+  // Persist identity to localStorage whenever it changes
+  useEffect(() => {
+    saveIdentity(displayName, twitterHandle);
+  }, [displayName, twitterHandle]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = url.trim();
@@ -162,7 +179,11 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
           "Content-Type": "application/json",
           ...(tokenRef.current ? { "X-Submit-Token": tokenRef.current } : {}),
         },
-        body: JSON.stringify({ url: trimmed }),
+        body: JSON.stringify({
+          url: trimmed,
+          display_name:   displayName.trim()   || null,
+          twitter_handle: twitterHandle.trim().replace(/^@/, "") || null,
+        }),
       });
 
       if (await isColdStart(res)) {
@@ -256,6 +277,28 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
             {status === "loading" ? "…" : status === "success" ? "✓" : "share"}
           </button>
         </form>
+        <div className="submit-identity-row">
+          <input
+            type="text"
+            className="submit-identity-input"
+            placeholder="your name (optional)"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            maxLength={50}
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <input
+            type="text"
+            className="submit-identity-input"
+            placeholder="@twitter (optional)"
+            value={twitterHandle}
+            onChange={(e) => setTwitterHandle(e.target.value.replace(/^@+/, ""))}
+            maxLength={16}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </div>
         {status === "error" && <div className="submit-mini-error">{errorMsg}</div>}
       </div>
     );
@@ -284,6 +327,28 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
             spellCheck={false}
             autoFocus
           />
+          <div className="submit-identity-row">
+            <input
+              type="text"
+              className="submit-identity-input"
+              placeholder="your name (optional)"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              maxLength={50}
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <input
+              type="text"
+              className="submit-identity-input"
+              placeholder="@twitter (optional)"
+              value={twitterHandle}
+              onChange={(e) => setTwitterHandle(e.target.value.replace(/^@+/, ""))}
+              maxLength={16}
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </div>
           <button
             ref={heroBtnRef}
             type="submit"

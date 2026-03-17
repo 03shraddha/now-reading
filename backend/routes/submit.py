@@ -1,8 +1,10 @@
 import hashlib
 import hmac
 import os
+import re
 import time
 from datetime import datetime, timezone
+from typing import Optional
 
 from fastapi import APIRouter, Request, Header, HTTPException
 from pydantic import BaseModel
@@ -152,7 +154,9 @@ def _hash_ip(ip: str) -> str:
 
 
 class SubmitRequest(BaseModel):
-    url: str
+    url:            str
+    display_name:   Optional[str] = None
+    twitter_handle: Optional[str] = None
 
 
 @router.post("/submit")
@@ -198,6 +202,11 @@ async def submit(
     # 4b. Fetch article metadata (title, favicon) — stored once at write time
     meta = await fetch_metadata(normalized)
 
+    # 4c. Sanitize optional identity fields
+    display_name = (body.display_name or "").strip()[:50] or None
+    raw_handle   = (body.twitter_handle or "").strip().lstrip("@").lower()
+    twitter_handle = raw_handle if re.match(r'^[a-z0-9_]{1,15}$', raw_handle) else None
+
     # 5. Write to Firestore (deduplicated by URL + city composite key)
     db = get_db()
     doc_id = _make_doc_id(normalized, location["country_code"], location["city"])
@@ -209,6 +218,8 @@ async def submit(
         doc_ref.update({
             "count": Increment(1),
             "updated_at": SERVER_TIMESTAMP,
+            "display_name":   display_name,
+            "twitter_handle": twitter_handle,
         })
     else:
         count = 1
@@ -224,6 +235,8 @@ async def submit(
             "lng": location["lng"],
             "count": 1,
             "updated_at": SERVER_TIMESTAMP,
+            "display_name":   display_name,
+            "twitter_handle": twitter_handle,
         })
 
     return {
@@ -235,4 +248,6 @@ async def submit(
         "title": meta.get("title") if meta.get("title") != domain else None,
         "favicon_url": meta.get("favicon_url", f"https://www.google.com/s2/favicons?domain={domain}&sz=32"),
         "count": count,
+        "display_name":   display_name,
+        "twitter_handle": twitter_handle,
     }

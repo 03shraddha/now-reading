@@ -9,8 +9,10 @@ export interface Submission {
   country_code: string;
   lat: number;
   lng: number;
-  count: number;       // how many people submitted this URL from this city
-  updated_at: Date;    // when last submitted
+  count: number;              // how many people submitted this URL from this city
+  updated_at: Date;           // when last submitted
+  display_name:   string | null; // optional name the submitter provided
+  twitter_handle: string | null; // optional twitter handle (without @)
 }
 
 export interface PageMetadata {

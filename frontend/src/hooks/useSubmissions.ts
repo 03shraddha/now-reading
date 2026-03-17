@@ -22,6 +22,8 @@ function docToSubmission(id: string, data: any): Submission {
     lng: data.lng,
     count: data.count ?? 1,
     updated_at: data.updated_at instanceof Timestamp ? data.updated_at.toDate() : new Date(),
+    display_name:   data.display_name   ?? null,
+    twitter_handle: data.twitter_handle ?? null,
   };
 }
 

@@ -30,12 +30,21 @@ interface FeedCard {
   domain:      string;
   title:       string | null;
   favicon_url: string | null;
-  cities:      { name: string; flag: string; count: number }[];
+  cities:      { name: string; flag: string; count: number; display_name: string | null; twitter_handle: string | null }[];
   totalCount:  number;
   latestAt:    Date;
   firstSeenAt: Date;
   lat:         number;
   lng:         number;
+}
+
+// ── Attribution helper ─────────────────────────────────────────
+function Attribution({ twitter_handle, display_name }: { twitter_handle: string | null; display_name: string | null }) {
+  if (twitter_handle)
+    return <> · <a href={`https://twitter.com/${twitter_handle}`} target="_blank" rel="noopener noreferrer" className="bubble-attribution">@{twitter_handle}</a></>;
+  if (display_name)
+    return <> · <span className="bubble-attribution bubble-attribution--name">{display_name}</span></>;
+  return null;
 }
 
 // ── Component ──────────────────────────────────────────────────
@@ -156,7 +165,7 @@ export function ActivityFeed() {
 
     for (const sub of inBoundsSubmissions.values()) {
       const entry = map.get(sub.url);
-      const city  = { name: sub.city, flag: countryFlag(sub.country_code), count: sub.count };
+      const city  = { name: sub.city, flag: countryFlag(sub.country_code), count: sub.count, display_name: sub.display_name, twitter_handle: sub.twitter_handle };
 
       if (entry) {
         entry.totalCount += sub.count;
@@ -359,13 +368,14 @@ export function ActivityFeed() {
                   <div className="bubble-title">{title}</div>
                   <div className="bubble-city">
                     {lead.flag} {lead.name}
+                    <Attribution twitter_handle={lead.twitter_handle} display_name={lead.display_name} />
                     {lead.count > 1 && <span className="bubble-count">{fmtCount(lead.count)}</span>}
                   </div>
                 </div>
 
                 {thread.slice(0, 3).map((c, j) => (
                   <div key={j} className="bubble bubble--reply">
-                    <span className="bubble-reply-city">{c.flag} {c.name}</span>
+                    <span className="bubble-reply-city">{c.flag} {c.name}<Attribution twitter_handle={c.twitter_handle} display_name={c.display_name} /></span>
                     {c.count > 1 && <span className="bubble-count bubble-count--reply">{fmtCount(c.count)}</span>}
                   </div>
                 ))}
