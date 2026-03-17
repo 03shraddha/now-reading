@@ -75,7 +75,9 @@ export function ActivityFeed() {
   }
 
   function onHandleTouchStart(e: React.TouchEvent) {
-    if (!sheetRef.current) return;
+    // Drag-to-resize only applies on desktop (tablet+) where feed is a bottom sheet.
+    // On mobile (<640px) the feed is a right-side drawer — no height drag.
+    if (window.innerWidth < 640 || !sheetRef.current) return;
     const currentH = sheetRef.current.getBoundingClientRect().height;
     dragRef.current = { startY: e.touches[0].clientY, startH: currentH };
     sheetRef.current.style.transition = "none"; // disable during drag
@@ -213,6 +215,11 @@ export function ActivityFeed() {
   if (submissions.size === 0) return null;
 
   return (
+    <>
+    {/* Backdrop: tapping outside closes the drawer on mobile */}
+    {mobileSheetOpen && (
+      <div className="feed-mobile-backdrop" onClick={() => setMobileSheetOpen(false)} />
+    )}
     <div className="activity-feed" ref={sheetRef}>
       {/* Header — tap to toggle, drag to resize */}
       <div
@@ -323,5 +330,6 @@ export function ActivityFeed() {
         </div>
       )}
     </div>
+    </>
   );
 }

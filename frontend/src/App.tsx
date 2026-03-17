@@ -63,11 +63,10 @@ export default function App() {
   const mobileSheetOpen    = useSubmissionsStore((s) => s.mobileSheetOpen);
   const setMobileSheetOpen = useSubmissionsStore((s) => s.setMobileSheetOpen);
 
-  // Collapse feed while hero card is showing so they don't overlap.
-  // Expand it once the hero is dismissed.
+  // On mobile, skip the hero card entirely — go straight to mini pill + feed.
   useEffect(() => {
-    setMobileSheetOpen(submitted);
-  }, [submitted, setMobileSheetOpen]);
+    if (window.innerWidth < 640) setSubmitted(true);
+  }, []);
 
   // Sync theme attribute for CSS overrides
   useEffect(() => {
@@ -123,6 +122,14 @@ export default function App() {
           aria-label="Toggle theme"
         >
           {theme === "dark" ? "☀️" : "🌙"}
+        </button>
+        {/* Mobile-only feed toggle — hidden on desktop via CSS */}
+        <button
+          className="feed-toggle-mobile"
+          onClick={() => setMobileSheetOpen(!mobileSheetOpen)}
+          aria-label={mobileSheetOpen ? "Close feed" : "Open feed"}
+        >
+          {mobileSheetOpen ? "×" : "≡"}
         </button>
       </header>
       <SubmissionBanner />
