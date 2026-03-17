@@ -1,10 +1,11 @@
 import { useEffect } from "react";
-import { collection, query, orderBy, limit, onSnapshot, Timestamp } from "firebase/firestore";
+import { collection, query, orderBy, limit, where, onSnapshot, Timestamp } from "firebase/firestore";
 import { db } from "../firebase";
 import { useSubmissionsStore } from "../store/submissionsStore";
 import type { Submission } from "../types";
 
 const LOAD_LIMIT = 200;
+const LOOKBACK_DAYS = 7;
 
 function docToSubmission(id: string, data: any): Submission {
   return {
@@ -26,7 +27,13 @@ export function useSubmissions() {
   const pruneOld = useSubmissionsStore((s) => s.pruneOld);
 
   useEffect(() => {
-    const q = query(collection(db, "submissions"), orderBy("updated_at", "desc"), limit(LOAD_LIMIT));
+    const cutoff = new Date(Date.now() - LOOKBACK_DAYS * 86_400_000);
+    const q = query(
+      collection(db, "submissions"),
+      where("updated_at", ">=", Timestamp.fromDate(cutoff)),
+      orderBy("updated_at", "desc"),
+      limit(LOAD_LIMIT),
+    );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === "added" || change.type === "modified") {

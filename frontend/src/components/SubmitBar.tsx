@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type { PinDropPayload } from "../hooks/usePinDrop";
+import { useSubmissionsStore } from "../store/submissionsStore";
 
 const PLACEHOLDERS = [
   "paste a news article…",
@@ -22,6 +23,34 @@ interface Props {
   onPinDrop?: (payload: PinDropPayload) => void;
 }
 
+// Fetch a short-lived HMAC token from the backend and keep it refreshed
+function useSubmitToken() {
+  const tokenRef    = useRef<string | null>(null);
+  const expiresRef  = useRef<number>(0);
+
+  const refresh = useCallback(async () => {
+    try {
+      const res = await fetch("/api/token");
+      if (res.ok) {
+        const data = await res.json();
+        tokenRef.current  = data.token;
+        expiresRef.current = Date.now() + (data.expires_in - 10) * 1000; // 10s early refresh
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    refresh();
+    // Re-fetch slightly before the token window closes
+    const id = setInterval(() => {
+      if (Date.now() >= expiresRef.current) refresh();
+    }, 30_000);
+    return () => clearInterval(id);
+  }, [refresh]);
+
+  return tokenRef;
+}
+
 export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
   const [url, setUrl] = useState("");
   const [status, setStatus] = useState<"idle" | "previewing" | "loading" | "success" | "error">("idle");
@@ -32,6 +61,7 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
   const debounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const heroBtnRef   = useRef<HTMLButtonElement>(null);
   const miniBtnRef   = useRef<HTMLButtonElement>(null);
+  const tokenRef     = useSubmitToken();
 
   // Cycle placeholder every 2 s (only when idle and empty)
   useEffect(() => {
@@ -103,7 +133,10 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
     try {
       const res = await fetch("/api/submit", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(tokenRef.current ? { "X-Submit-Token": tokenRef.current } : {}),
+        },
         body: JSON.stringify({ url: trimmed }),
       });
 
@@ -117,6 +150,25 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
       setStatus("success");
       setUrl("");
       setMetadata(null);
+
+      // Mark this submission as the user's own pin (clears after 10 min)
+      if (data.id) {
+        useSubmissionsStore.getState().setUserPinId(data.id);
+        setTimeout(() => useSubmissionsStore.getState().setUserPinId(null), 10 * 60 * 1000);
+      }
+
+      // Set submission banner
+      if (metadata) {
+        useSubmissionsStore.getState().setSubmissionBanner({
+          favicon_url: metadata.favicon_url,
+          title: metadata.title,
+          domain: metadata.domain,
+          city: data.city ?? "",
+        });
+      }
+      // Track submitted URL for sidebar filter (10 min)
+      useSubmissionsStore.getState().setUserSubmittedUrl(trimmed);
+      setTimeout(() => useSubmissionsStore.getState().setUserSubmittedUrl(null), 10 * 60 * 1000);
 
       // Fire pin drop animation — get button center as screen-space origin
       if (onPinDrop && data.lat != null && data.lng != null) {
@@ -172,11 +224,6 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
             {status === "loading" ? "…" : status === "success" ? "✓" : "+"}
           </button>
         </form>
-        {status === "success" && (
-          <div className="submit-mini-success">
-            {submitCount > 1 ? `🔥 ${submitCount} reading this` : "on the map!"}
-          </div>
-        )}
       </div>
     );
   }
@@ -227,11 +274,6 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
         )}
 
         {status === "error" && <div className="submit-hero-error">{errorMsg}</div>}
-        {status === "success" && (
-          <div className="submit-hero-success">
-            {submitCount > 1 ? `🔥 ${submitCount} people reading this` : "you're on the map!"}
-          </div>
-        )}
       </div>
     </div>
   );

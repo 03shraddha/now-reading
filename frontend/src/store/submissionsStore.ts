@@ -2,6 +2,13 @@ import { create } from "zustand";
 import type { Submission } from "../types";
 import type { MapBounds } from "../types";
 
+interface SubmissionBanner {
+  favicon_url: string;
+  title: string;
+  domain: string;
+  city: string;
+}
+
 const MAX_AGE_MS = 30 * 60 * 1000;
 
 interface SubmissionsState {
@@ -9,6 +16,8 @@ interface SubmissionsState {
   focusLocation:    [number, number] | null;
   mapBounds:        MapBounds | null;
   highlightedId:    string | null;
+  hoveredUrl:       string | null;
+  userPinId:        string | null;
   viewedLinks:      Set<string>;
   autoFollow:       boolean;
 
@@ -16,9 +25,16 @@ interface SubmissionsState {
   setFocusLocation: (loc: [number, number] | null) => void;
   setMapBounds:     (bounds: MapBounds | null) => void;
   setHighlightedId: (id: string | null) => void;
+  setHoveredUrl:    (url: string | null) => void;
+  setUserPinId:     (id: string | null) => void;
   markViewed:       (url: string) => void;
   setAutoFollow:    (on: boolean) => void;
   pruneOld:         () => void;
+
+  submissionBanner: SubmissionBanner | null;
+  setSubmissionBanner: (b: SubmissionBanner | null) => void;
+  userSubmittedUrl: string | null;
+  setUserSubmittedUrl: (url: string | null) => void;
 }
 
 export const useSubmissionsStore = create<SubmissionsState>((set) => ({
@@ -26,8 +42,12 @@ export const useSubmissionsStore = create<SubmissionsState>((set) => ({
   focusLocation: null,
   mapBounds:     null,
   highlightedId: null,
+  hoveredUrl:    null,
+  userPinId:     null,
   viewedLinks:   new Set(),
   autoFollow:    false,
+  submissionBanner: null,
+  userSubmittedUrl: null,
 
   upsertSubmission: (s) =>
     set((state) => {
@@ -42,6 +62,10 @@ export const useSubmissionsStore = create<SubmissionsState>((set) => ({
 
   setHighlightedId: (id) => set({ highlightedId: id }),
 
+  setHoveredUrl: (url) => set({ hoveredUrl: url }),
+
+  setUserPinId: (id) => set({ userPinId: id }),
+
   markViewed: (url) =>
     set((state) => {
       const next = new Set(state.viewedLinks);
@@ -50,6 +74,9 @@ export const useSubmissionsStore = create<SubmissionsState>((set) => ({
     }),
 
   setAutoFollow: (on) => set({ autoFollow: on }),
+
+  setSubmissionBanner: (b) => set({ submissionBanner: b }),
+  setUserSubmittedUrl: (url) => set({ userSubmittedUrl: url }),
 
   pruneOld: () =>
     set((state) => {

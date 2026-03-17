@@ -16,49 +16,63 @@ function timeAgo(date: Date): string {
   return `${Math.floor(seconds / 3600)}h`;
 }
 
-type SortMode = "recent" | "most-read" | "rising";
+function fmtCount(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k`;
+  if (n >= 99)   return "99+";
+  return String(n);
+}
+
+type SortMode = "recent" | "a-z" | "z-a";
 
 interface FeedCard {
-  url:        string;
-  domain:     string;
-  cities:     { name: string; flag: string; count: number }[];
-  totalCount: number;
-  latestAt:   Date;
+  url:         string;
+  domain:      string;
+  cities:      { name: string; flag: string; count: number }[];
+  totalCount:  number;
+  latestAt:    Date;
   firstSeenAt: Date;
-  lat:        number;
-  lng:        number;
+  lat:         number;
+  lng:         number;
 }
 
 // ── Component ──────────────────────────────────────────────────
 
 export function ActivityFeed() {
   const submissions      = useSubmissionsStore((s) => s.submissions);
+  const mapBounds        = useSubmissionsStore((s) => s.mapBounds);
   const setFocusLocation = useSubmissionsStore((s) => s.setFocusLocation);
+  const hoveredUrl       = useSubmissionsStore((s) => s.hoveredUrl);
+  const setHoveredUrl    = useSubmissionsStore((s) => s.setHoveredUrl);
+  const userPinId        = useSubmissionsStore((s) => s.userPinId);
 
-  const [titles, setTitles]   = useState<Record<string, string>>({});
-  const [sort, setSort]        = useState<SortMode>("recent");
-  const [query, setQuery]      = useState("");
-  const fetchedUrls            = useRef<Set<string>>(new Set());
-  // Track the URL the user just submitted (for "your bubble" highlight)
-  const [myUrl, setMyUrl]      = useState<string | null>(null);
+  const [titles, setTitles]       = useState<Record<string, string>>({});
+  const [sort, setSort]           = useState<SortMode>("recent");
+  const [cityQuery, setCityQuery] = useState("");
+  const fetchedUrls                = useRef<Set<string>>(new Set());
 
-  // Listen for the user's own submission via a custom event dispatched by SubmitBar
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const url = (e as CustomEvent<string>).detail;
-      setMyUrl(url);
-      // Clear highlight after 30s
-      setTimeout(() => setMyUrl(null), 30_000);
-    };
-    window.addEventListener("user-submitted", handler);
-    return () => window.removeEventListener("user-submitted", handler);
-  }, []);
+  const userSubmittedUrl = useSubmissionsStore((s) => s.userSubmittedUrl);
+  const myUrl = userSubmittedUrl;
+
+  // ── Viewport filter ────────────────────────────────────────
+  const inBoundsSubmissions = useMemo(() => {
+    if (!mapBounds) return submissions;
+    const filtered = new Map();
+    for (const [id, sub] of submissions) {
+      if (
+        sub.lat >= mapBounds.south && sub.lat <= mapBounds.north &&
+        sub.lng >= mapBounds.west  && sub.lng <= mapBounds.east
+      ) {
+        filtered.set(id, sub);
+      }
+    }
+    return filtered;
+  }, [submissions, mapBounds]);
 
   // ── Group by URL ───────────────────────────────────────────
   const allCards: FeedCard[] = useMemo(() => {
     const map = new Map<string, FeedCard>();
 
-    for (const sub of submissions.values()) {
+    for (const sub of inBoundsSubmissions.values()) {
       const entry = map.get(sub.url);
       const city  = { name: sub.city, flag: countryFlag(sub.country_code), count: sub.count };
 
@@ -81,35 +95,45 @@ export function ActivityFeed() {
     }
 
     return Array.from(map.values());
-  }, [submissions]);
+  }, [inBoundsSubmissions]);
+
+  // ── Detect dominant region for header ─────────────────────
+  const regionName = useMemo(() => {
+    const cityCount = new Map<string, number>();
+    for (const card of allCards) {
+      for (const c of card.cities) cityCount.set(c.name, (cityCount.get(c.name) ?? 0) + c.count);
+    }
+    let top = "";
+    let topCount = 0;
+    for (const [city, count] of cityCount) {
+      if (count > topCount) { top = city; topCount = count; }
+    }
+    return top || null;
+  }, [allCards]);
+
+  // Reset sort to "recent" when feed has fewer than 2 cards (sort is meaningless)
+  useEffect(() => {
+    if (allCards.length < 2 && sort !== "recent") setSort("recent");
+  }, [allCards.length, sort]);
 
   // ── Sort ──────────────────────────────────────────────────
   const sorted = useMemo(() => {
-    const now = Date.now();
     return [...allCards].sort((a, b) => {
-      if (sort === "most-read") return b.totalCount - a.totalCount;
-      if (sort === "rising") {
-        // Rising = count / hours since first seen  (velocity)
-        const hoursA = Math.max(1, (now - a.firstSeenAt.getTime()) / 3_600_000);
-        const hoursB = Math.max(1, (now - b.firstSeenAt.getTime()) / 3_600_000);
-        return (b.totalCount / hoursB) - (a.totalCount / hoursA);
-      }
-      return b.latestAt.getTime() - a.latestAt.getTime(); // recent
+      if (sort === "a-z") return  a.domain.localeCompare(b.domain);
+      if (sort === "z-a") return  b.domain.localeCompare(a.domain);
+      return b.latestAt.getTime() - a.latestAt.getTime();
     });
   }, [allCards, sort]);
 
-  // ── Search filter ─────────────────────────────────────────
+  // ── Final cards: city text filter, user's own URL excluded ──
   const cards = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const filtered = q
-      ? sorted.filter((c) =>
-          c.domain.toLowerCase().includes(q) ||
-          (titles[c.url] ?? "").toLowerCase().includes(q) ||
-          c.cities.some((city) => city.name.toLowerCase().includes(q))
-        )
+    const q = cityQuery.trim().toLowerCase();
+    let filtered = q
+      ? sorted.filter((c) => c.cities.some((city) => city.name.toLowerCase().includes(q)))
       : sorted;
-    return filtered.slice(0, 25);
-  }, [sorted, query, titles]);
+    if (myUrl) filtered = filtered.filter((c) => c.url !== myUrl);
+    return filtered.slice(0, 30);
+  }, [sorted, cityQuery, myUrl]);
 
   // ── Fetch titles ──────────────────────────────────────────
   useEffect(() => {
@@ -131,60 +155,68 @@ export function ActivityFeed() {
 
   return (
     <div className="activity-feed">
-      {/* Header: live count + sort tabs */}
+      {/* Header */}
       <div className="feed-header">
         <div className="feed-header-top">
-          <span className="feed-title">live</span>
-          <span className="feed-count">{allCards.length}</span>
+          <span className="feed-title">
+            {regionName ? `top reads in ${regionName}` : "top reads"}
+          </span>
+          <span className="feed-count" title="unique links in view">
+            {cards.length} {cards.length === 1 ? "link" : "links"}
+          </span>
         </div>
+
+        {/* Sort tabs */}
         <div className="feed-sort-tabs">
-          {(["recent", "most-read", "rising"] as SortMode[]).map((mode) => (
+          {(["recent", "a-z", "z-a"] as SortMode[]).map((mode) => (
             <button
               key={mode}
               className={`feed-sort-tab${sort === mode ? " feed-sort-tab--active" : ""}`}
               onClick={() => setSort(mode)}
             >
-              {mode === "most-read" ? "most read" : mode}
+              {mode}
             </button>
           ))}
         </div>
-        <div className="feed-search-wrap">
+        <div className="feed-city-input-wrap feed-city-input-wrap--always">
           <input
-            className="feed-search"
-            placeholder="search…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            id="feed-city-input"
+            className={`feed-city-input${cityQuery ? " feed-city-input--active" : ""}`}
+            placeholder="filter by city…"
+            value={cityQuery}
+            onChange={(e) => setCityQuery(e.target.value)}
+            spellCheck={false}
           />
-          {query && (
-            <button className="feed-search-clear" onClick={() => setQuery("")}>×</button>
+          {cityQuery && (
+            <button className="feed-city-input-clear" onClick={() => setCityQuery("")}>×</button>
           )}
         </div>
       </div>
 
       {cards.length === 0 ? (
-        <div className="feed-empty">no results for "{query}"</div>
+        <div className="feed-empty">nothing here yet — pan the map</div>
       ) : (
         <div className="feed-list">
           {cards.map((card, i) => {
-            const title    = titles[card.url];
-            const isMyCard = card.url === myUrl;
-            const sorted   = [...card.cities].sort((a, b) => b.count - a.count);
-            const lead     = sorted[0];
-            const thread   = sorted.slice(1);
+            const title     = titles[card.url];
+            const isHovered = card.url === hoveredUrl;
+            const citiesSorted = [...card.cities].sort((a, b) => b.count - a.count);
+            const lead      = citiesSorted[0];
+            const thread    = citiesSorted.slice(1);
 
             return (
               <a
                 key={card.url}
-                className={`bubble-thread${isMyCard ? " bubble-thread--mine" : ""}`}
+                className={`bubble-thread${isHovered ? " bubble-thread--hovered" : ""}`}
                 href={card.url}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setFocusLocation([card.lat, card.lng])}
+                onMouseEnter={() => setHoveredUrl(card.url)}
+                onMouseLeave={() => setHoveredUrl(null)}
                 style={{ animationDelay: `${i * 40}ms` }}
               >
-                {isMyCard && <div className="bubble-yours-label">yours · just now</div>}
-
-                <div className={`bubble bubble--main${isMyCard ? " bubble--mine" : ""}`}>
+                <div className="bubble bubble--main">
                   <div className="bubble-meta">
                     <img
                       src={`https://www.google.com/s2/favicons?domain=${card.domain}&sz=32`}
@@ -198,16 +230,21 @@ export function ActivityFeed() {
                   {title && <div className="bubble-title">{title}</div>}
                   <div className="bubble-city">
                     {lead.flag} {lead.name}
-                    {lead.count > 1 && <span className="bubble-count">{lead.count}</span>}
+                    {lead.count > 1 && <span className="bubble-count">{fmtCount(lead.count)}</span>}
                   </div>
                 </div>
 
-                {thread.map((c, j) => (
+                {thread.slice(0, 3).map((c, j) => (
                   <div key={j} className="bubble bubble--reply">
                     <span className="bubble-reply-city">{c.flag} {c.name}</span>
-                    {c.count > 1 && <span className="bubble-count bubble-count--reply">{c.count}</span>}
+                    {c.count > 1 && <span className="bubble-count bubble-count--reply">{fmtCount(c.count)}</span>}
                   </div>
                 ))}
+                {thread.length > 3 && (
+                  <div className="bubble bubble--reply bubble--overflow">
+                    +{thread.length - 3} more cities
+                  </div>
+                )}
               </a>
             );
           })}

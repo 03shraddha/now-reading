@@ -9,6 +9,9 @@ import { useSubmissions } from "../hooks/useSubmissions";
 import { useSubmissionsStore } from "../store/submissionsStore";
 import type { Submission } from "../types";
 
+// Track which submission each marker represents, for hover highlighting
+const markerUrlMap = new Map<L.Marker, string>(); // marker → url
+
 const INDIA_CENTER: L.LatLngTuple = [20.5937, 78.9629];
 const DEFAULT_ZOOM = 5;
 
@@ -27,14 +30,28 @@ function dotColor(count: number): "cool" | "warm" | "hot" {
   return "cool";
 }
 
-// Diamond geometric marker (clip-path in CSS)
-function makeDotIcon(count: number, isNew: boolean) {
-  const size = dotSize(count);
-  const color = dotColor(count);
-  const pulseClass = isNew ? "reading-dot--pulse" : "";
+// Special icon for the user's own drop — larger, glowing, with a label
+function makeUserPinIcon() {
   return L.divIcon({
     className: "",
-    html: `<div class="reading-dot reading-dot--${color} ${pulseClass}"></div>`,
+    html: `<div class="user-pin-wrapper">
+      <div class="user-pin-label">your drop</div>
+      <div class="reading-dot reading-dot--user"></div>
+    </div>`,
+    iconSize:   [72, 52],
+    iconAnchor: [36, 44],
+  });
+}
+
+// Dot marker — circle with optional pulse or highlight ring
+function makeDotIcon(count: number, isNew: boolean, highlighted = false) {
+  const size = highlighted ? dotSize(count) + 8 : dotSize(count);
+  const color = dotColor(count);
+  const pulseClass = isNew ? "reading-dot--pulse" : "";
+  const highlightClass = highlighted ? "reading-dot--highlighted" : "";
+  return L.divIcon({
+    className: "",
+    html: `<div class="reading-dot reading-dot--${color} ${pulseClass} ${highlightClass}"></div>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
   });
@@ -115,6 +132,12 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
   const submissions      = useSubmissionsStore((s) => s.submissions);
   const submissionsRef   = useRef(submissions);
   submissionsRef.current = submissions;
+
+  const setHoveredUrl    = useSubmissionsStore((s) => s.setHoveredUrl);
+  const hoveredUrl       = useSubmissionsStore((s) => s.hoveredUrl);
+  const userPinId        = useSubmissionsStore((s) => s.userPinId);
+  const userPinIdRef     = useRef(userPinId);
+  userPinIdRef.current   = userPinId;
 
   // Stable callback refs to avoid stale closures in map event handlers
   const onZoomChangeRef  = useRef(onZoomChange);
@@ -287,13 +310,17 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
     for (const [id, sub] of submissions) {
       const existing = markersRef.current.get(id);
       if (!existing) {
+        const isUserPin = id === userPinIdRef.current;
         const marker = L.marker([sub.lat, sub.lng], {
-          icon: makeDotIcon(sub.count, isRecent(sub)),
+          icon: isUserPin ? makeUserPinIcon() : makeDotIcon(sub.count, isRecent(sub)),
         });
         marker.on("click", async () => {
           const html = await buildRichPopup(sub);
           marker.bindPopup(html).openPopup();
         });
+        marker.on("mouseover", () => setHoveredUrl(sub.url));
+        marker.on("mouseout",  () => setHoveredUrl(null));
+        markerUrlMap.set(marker, sub.url);
         clusterGroup.addLayer(marker);
         markersRef.current.set(id, marker);
 
@@ -316,6 +343,7 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
     for (const [id, marker] of markersRef.current) {
       if (!currentIds.has(id)) {
         clusterGroup.removeLayer(marker);
+        markerUrlMap.delete(marker);
         markersRef.current.delete(id);
       }
     }
@@ -327,6 +355,32 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
       try { (heatLayerRef.current as any).setLatLngs(pts); } catch {}
     }
   }, [submissions]);
+
+  // ── Highlight markers when hoveredUrl changes ─────────────────
+  useEffect(() => {
+    for (const [marker, url] of markerUrlMap) {
+      const sub = Array.from(submissionsRef.current.values()).find((s) => s.url === url);
+      if (!sub) continue;
+      if (sub.id === userPinIdRef.current) {
+        marker.setIcon(makeUserPinIcon());
+      } else {
+        marker.setIcon(makeDotIcon(sub.count, false, url === hoveredUrl));
+      }
+    }
+  }, [hoveredUrl]);
+
+  // ── Re-render user's own pin when userPinId changes ───────────
+  useEffect(() => {
+    for (const [id, marker] of markersRef.current) {
+      const sub = submissionsRef.current.get(id);
+      if (!sub) continue;
+      if (id === userPinId) {
+        marker.setIcon(makeUserPinIcon());
+      } else {
+        marker.setIcon(makeDotIcon(sub.count, false, false));
+      }
+    }
+  }, [userPinId]);
 
   // ── Swap tile layer when theme changes ────────────────────────
   useEffect(() => {

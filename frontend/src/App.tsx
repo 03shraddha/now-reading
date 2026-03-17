@@ -8,6 +8,32 @@ import { useSubmissionsStore } from "./store/submissionsStore";
 import type { MapViewHandle }  from "./components/MapView";
 import "./App.css";
 
+function SubmissionBanner() {
+  const banner             = useSubmissionsStore((s) => s.submissionBanner);
+  const setSubmissionBanner = useSubmissionsStore((s) => s.setSubmissionBanner);
+
+  useEffect(() => {
+    if (!banner) return;
+    const id = setTimeout(() => setSubmissionBanner(null), 30_000);
+    return () => clearTimeout(id);
+  }, [banner, setSubmissionBanner]);
+
+  if (!banner) return null;
+
+  return (
+    <div className="submission-banner">
+      <img src={banner.favicon_url} className="submission-banner__favicon" alt=""
+        onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} />
+      <span className="submission-banner__title">{banner.title}</span>
+      <span className="submission-banner__sep">·</span>
+      <span className="submission-banner__domain">{banner.domain}</span>
+      {banner.city && (<><span className="submission-banner__sep">·</span>
+        <span className="submission-banner__city">dropped in {banner.city}</span></>)}
+      <button className="submission-banner__dismiss" onClick={() => setSubmissionBanner(null)}>×</button>
+    </div>
+  );
+}
+
 export default function App() {
   const [submitted, setSubmitted] = useState(false);
   const [theme, setTheme]         = useState<"dark" | "light">("light");
@@ -15,8 +41,9 @@ export default function App() {
   const mapViewRef                = useRef<MapViewHandle | null>(null);
   const { state: pinState, triggerDrop } = usePinDrop(mapViewRef);
 
-  const submissions = useSubmissionsStore((s) => s.submissions);
-  const liveCount   = submissions.size;
+  const submissions      = useSubmissionsStore((s) => s.submissions);
+  const liveCount        = submissions.size;
+  const submissionBanner = useSubmissionsStore((s) => s.submissionBanner);
 
   // Sync theme attribute for CSS overrides
   useEffect(() => {
@@ -51,7 +78,7 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div className={`app${submissionBanner ? " app--banner" : ""}`}>
       {/* ── Ambient world layers ──────────────────────────── */}
       <div className="world-sky"       aria-hidden="true" />
       <div className="world-particles" aria-hidden="true" />
@@ -71,6 +98,7 @@ export default function App() {
           {theme === "dark" ? "☀︎" : "◗"}
         </button>
       </header>
+      <SubmissionBanner />
 
       {/* ── Map + overlays ──────────────────────────────── */}
       <div className="map-container">
