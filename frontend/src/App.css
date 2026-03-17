@@ -551,13 +551,10 @@ html, body, #root {
 .popup-meta {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 12px; padding-top: 8px; border-top: 1px solid #E2DFDA;
+  gap: 8px;
 }
-.popup-city  { font-size: 12px; color: #A09DAE; }
-.popup-count {
-  font-size: 12px; font-weight: 700; color: #D97655;
-  background: rgba(217,118,85,0.12); padding: 2px 10px;
-  border-radius: 20px; font-variant-numeric: tabular-nums;
-}
+.popup-city  { font-size: 12px; color: #A09DAE; white-space: nowrap; }
+.popup-count { display: none; } /* removed — count shown in feed sidebar, not popup */
 .popup-link {
   display: block; background: rgba(106,90,249,0.08);
   border: 1px solid rgba(106,90,249,0.22); border-radius: 10px;
@@ -1761,7 +1758,7 @@ html, body, #root {
   .bubble-reply-city { font-size: 11px; }
 
   /* Increase tiny font sizes to 14px minimum on mobile */
-  .popup-domain, .popup-city, .popup-count { font-size: 14px; }
+  .popup-domain, .popup-city { font-size: 14px; }
 
   /* Force 16px on all inputs to prevent iOS Safari auto-zoom on focus */
   input, .feed-city-input, .submit-hero-input, .submit-mini-input {
