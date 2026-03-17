@@ -229,14 +229,15 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
   const isWaking    = status === "waking";
 
   if (collapsed) {
-    // Mini pill in bottom-right corner
     return (
       <div className="submit-mini-wrapper">
+        {/* Prompt shown only on mobile via CSS */}
+        <p className="submit-mini-prompt">{heroText}<span className="typewriter-cursor">|</span></p>
         <form onSubmit={handleSubmit} className="submit-mini-form">
           <input
             type="text"
             className="submit-mini-input"
-            placeholder="paste a url…"
+            placeholder={placeholder}
             value={url}
             onChange={(e) => {
               setUrl(e.target.value);
@@ -252,9 +253,10 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
             className="submit-mini-btn"
             disabled={status === "loading" || !url.trim()}
           >
-            {status === "loading" ? "…" : status === "success" ? "✓" : "+"}
+            {status === "loading" ? "…" : status === "success" ? "✓" : "share"}
           </button>
         </form>
+        {status === "error" && <div className="submit-mini-error">{errorMsg}</div>}
       </div>
     );
   }

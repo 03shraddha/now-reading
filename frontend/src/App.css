@@ -772,6 +772,11 @@ html, body, #root {
 .submit-mini-btn:active:not(:disabled) { transform: scale(0.93); }
 .submit-mini-btn:disabled { opacity: 0.28; cursor: not-allowed; }
 
+/* Mobile prompt — hidden on desktop */
+.submit-mini-prompt { display: none; }
+/* Mobile error */
+.submit-mini-error { display: none; }
+
 .submit-mini-success {
   font-size: 14px; font-weight: 600; color: #4EB896;
   text-align: right; padding-right: 4px;
@@ -1653,8 +1658,60 @@ html, body, #root {
   }
 
   .submit-mini-btn {
-    width: 42px; height: 42px;
-    font-size: 20px;
+    width: auto;
+    height: 42px;
+    padding: 0 18px;
+    font-size: 15px;
+    border-radius: 12px;
+    font-weight: 600;
+  }
+
+  /* Prompt: typewriter question above the input */
+  .submit-mini-prompt {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: #6B6A7A;
+    text-align: center;
+    margin-bottom: 8px;
+    min-height: 1.4em;
+  }
+  [data-theme="dark"] .submit-mini-prompt { color: #8886A0; }
+
+  /* Error shown below the form on mobile */
+  .submit-mini-error {
+    display: block;
+    font-size: 12px;
+    color: #D44F6A;
+    text-align: center;
+    margin-top: 6px;
+  }
+
+  /* Make the whole wrapper + pill feel like a real CTA card */
+  .submit-mini-wrapper {
+    background: rgba(255,255,255,0.96);
+    backdrop-filter: blur(16px) saturate(160%);
+    border-radius: 20px;
+    padding: 12px 14px 14px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08);
+    border: 1px solid rgba(200,195,185,0.4);
+  }
+  [data-theme="dark"] .submit-mini-wrapper {
+    background: rgba(18,20,30,0.96);
+    border-color: rgba(50,54,74,0.7);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3);
+  }
+
+  /* Inner pill: no separate background — wrapper is the card now */
+  .submit-mini-form {
+    background: rgba(245,243,238,0.8);
+    border-color: rgba(200,195,185,0.5);
+    box-shadow: none;
+  }
+  [data-theme="dark"] .submit-mini-form {
+    background: rgba(24,27,40,0.8);
+    border-color: rgba(50,54,74,0.6);
+    box-shadow: none;
   }
 
   /* ── Feed close button — inside the drawer header on mobile ── */
