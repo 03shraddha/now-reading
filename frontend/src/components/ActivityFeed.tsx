@@ -10,7 +10,6 @@ function countryFlag(code: string): string {
 }
 
 function timeAgo(date: Date): string {
-  // Clamp to 0 — SERVER_TIMESTAMP may arrive slightly in the future
   const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
   if (seconds < 60)   return `${seconds}s`;
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
@@ -20,10 +19,9 @@ function timeAgo(date: Date): string {
 // ── Types ──────────────────────────────────────────────────────
 
 interface FeedCard {
-  // keyed by url — groups same article submitted from multiple cities
   url:        string;
   domain:     string;
-  cities:     { name: string; flag: string }[];
+  cities:     { name: string; flag: string; count: number }[];
   totalCount: number;
   latestAt:   Date;
   lat:        number;
@@ -36,21 +34,20 @@ export function ActivityFeed() {
   const submissions      = useSubmissionsStore((s) => s.submissions);
   const setFocusLocation = useSubmissionsStore((s) => s.setFocusLocation);
 
-  // title cache: url → title string
   const [titles, setTitles]     = useState<Record<string, string>>({});
   const fetchedUrls             = useRef<Set<string>>(new Set());
 
-  // ── Group same URL submitted from different cities ─────────
+  // ── Group by URL ───────────────────────────────────────────
   const cards: FeedCard[] = useMemo(() => {
     const map = new Map<string, FeedCard>();
 
     for (const sub of submissions.values()) {
       const entry = map.get(sub.url);
-      const cityEntry = { name: sub.city, flag: countryFlag(sub.country_code) };
+      const city  = { name: sub.city, flag: countryFlag(sub.country_code), count: sub.count };
 
       if (entry) {
         entry.totalCount += sub.count;
-        entry.cities.push(cityEntry);
+        entry.cities.push(city);
         if (sub.updated_at > entry.latestAt) {
           entry.latestAt = sub.updated_at;
           entry.lat = sub.lat;
@@ -58,13 +55,9 @@ export function ActivityFeed() {
         }
       } else {
         map.set(sub.url, {
-          url:        sub.url,
-          domain:     sub.domain,
-          cities:     [cityEntry],
-          totalCount: sub.count,
-          latestAt:   sub.updated_at,
-          lat:        sub.lat,
-          lng:        sub.lng,
+          url: sub.url, domain: sub.domain,
+          cities: [city], totalCount: sub.count,
+          latestAt: sub.updated_at, lat: sub.lat, lng: sub.lng,
         });
       }
     }
@@ -74,12 +67,11 @@ export function ActivityFeed() {
       .slice(0, 25);
   }, [submissions]);
 
-  // ── Lazy-fetch titles for each unique URL ──────────────────
+  // ── Fetch titles ───────────────────────────────────────────
   useEffect(() => {
     for (const card of cards) {
       if (fetchedUrls.current.has(card.url)) continue;
       fetchedUrls.current.add(card.url);
-
       fetch(`/api/metadata?url=${encodeURIComponent(card.url)}`)
         .then((r) => r.ok ? r.json() : null)
         .then((data) => {
@@ -87,7 +79,7 @@ export function ActivityFeed() {
             setTitles((prev) => ({ ...prev, [card.url]: data.title }));
           }
         })
-        .catch(() => { /* silently skip */ });
+        .catch(() => {});
     }
   }, [cards]);
 
@@ -103,56 +95,46 @@ export function ActivityFeed() {
       <div className="feed-list">
         {cards.map((card) => {
           const title = titles[card.url];
-          // Show up to 2 cities inline, "+N" overflow
-          const shownCities = card.cities.slice(0, 2);
-          const overflow    = card.cities.length - shownCities.length;
+          // Sort cities by count so the biggest reader group leads
+          const sorted = [...card.cities].sort((a, b) => b.count - a.count);
+          const lead   = sorted[0];
+          const thread = sorted.slice(1);
 
           return (
             <a
               key={card.url}
-              className="feed-item"
+              className="bubble-thread"
               href={card.url}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => setFocusLocation([card.lat, card.lng])}
             >
-              {/* Top: favicon + domain + timestamp */}
-              <div className="feed-card-top">
-                <div className="feed-card-source">
+              {/* Main bubble — lead city */}
+              <div className="bubble bubble--main">
+                <div className="bubble-meta">
                   <img
                     src={`https://www.google.com/s2/favicons?domain=${card.domain}&sz=32`}
-                    className="feed-favicon"
+                    className="bubble-favicon"
                     alt=""
                     onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
                   />
-                  <span className="feed-domain">{card.domain}</span>
+                  <span className="bubble-domain">{card.domain}</span>
+                  <span className="bubble-time">{timeAgo(card.latestAt)}</span>
                 </div>
-                <span className="feed-time">{timeAgo(card.latestAt)}</span>
+                {title && <div className="bubble-title">{title}</div>}
+                <div className="bubble-city">
+                  {lead.flag} {lead.name}
+                  {lead.count > 1 && <span className="bubble-count">{lead.count}</span>}
+                </div>
               </div>
 
-              {/* Title — the actual article name, most important signal */}
-              {title && (
-                <div className="feed-title-text">{title}</div>
-              )}
-
-              {/* Bottom: city chips + reader count */}
-              <div className="feed-card-bottom">
-                <div className="feed-cities">
-                  {shownCities.map((c, i) => (
-                    <span key={i} className="feed-location">
-                      {c.flag} {c.name}
-                    </span>
-                  ))}
-                  {overflow > 0 && (
-                    <span className="feed-location feed-location--overflow">
-                      +{overflow}
-                    </span>
-                  )}
+              {/* Thread replies — other cities reading the same thing */}
+              {thread.map((c, i) => (
+                <div key={i} className="bubble bubble--reply">
+                  <span className="bubble-reply-city">{c.flag} {c.name}</span>
+                  {c.count > 1 && <span className="bubble-count bubble-count--reply">{c.count}</span>}
                 </div>
-                {card.totalCount > 1 && (
-                  <span className="feed-badge">{card.totalCount}</span>
-                )}
-              </div>
+              ))}
             </a>
           );
         })}

@@ -624,93 +624,66 @@ html, body, #root {
 }
 .feed-list::-webkit-scrollbar { display: none; }
 
-/* ── Manga panel card ─────────────────────────────────────────── */
-.feed-item {
-  position: relative;
-  display: flex; flex-direction: column; gap: 10px;
-  width: 100%; padding: 15px 16px 13px;
-  text-align: left; color: inherit; cursor: pointer;
+/* ══════════════════════════════════════════════════════════════
+   CHAT BUBBLE FEED
+   Main bubble = lead city. Replies = other cities reading same link.
+   ══════════════════════════════════════════════════════════════ */
+
+.bubble-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(200,195,185,0.25);
   text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.bubble-thread:hover  { background: rgba(106,90,249,0.03); }
+.bubble-thread:active { background: rgba(106,90,249,0.06); }
 
-  /* Manga paper with subtle gradient — the scene's background */
-  background: linear-gradient(138deg, #FAFAF8 0%, #F6F1F8 100%);
-  border: 1px solid #E2DFDA;
-  /* Always-on left accent bar = the panel's ink frame */
-  border-left: 3px solid #6A5AF9;
-  border-radius: 10px;
-  overflow: hidden;
-
-  box-shadow:
-    0 1px 4px rgba(0,0,0,0.06),
-    0 4px 12px rgba(0,0,0,0.03);
-
-  /* Dreamlike transition — ease-in, long ease-out */
-  transition:
-    background 0.5s cubic-bezier(0.25, 0.1, 0.1, 1),
-    border-color 0.5s cubic-bezier(0.25, 0.1, 0.1, 1),
-    box-shadow 0.5s cubic-bezier(0.25, 0.1, 0.1, 1),
-    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+/* Main bubble — incoming iMessage style */
+.bubble--main {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: #fff;
+  border: 1px solid #E8E5F0;
+  border-radius: 18px 18px 18px 4px;
+  padding: 10px 13px 9px;
+  max-width: 92%;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.bubble-thread:hover .bubble--main {
+  box-shadow: 0 2px 8px rgba(106,90,249,0.1);
+  border-color: rgba(106,90,249,0.2);
 }
 
-/* Top accent glow line — appears on hover like a scene activation */
-.feed-item::before {
-  content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 1.5px;
-  background: linear-gradient(to right, rgba(106,90,249,0.7), rgba(59,187,200,0.3), transparent);
-  opacity: 0;
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: opacity 0.4s ease, transform 0.5s cubic-bezier(0.22,1,0.36,1);
+.bubble-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.feed-item:hover {
-  background: linear-gradient(138deg, #F2EEF8 0%, #EDE8F8 100%);
-  border-color: #D8D4EC;
-  border-left-color: #5A48E8;
-  box-shadow:
-    0 2px 8px rgba(106,90,249,0.12),
-    0 8px 24px rgba(106,90,249,0.08),
-    0 0 0 1px rgba(106,90,249,0.06);
-  transform: translateX(3px); /* subtle panel push */
-}
-.feed-item:hover::before {
-  opacity: 1;
-  transform: scaleX(1);
-}
-.feed-item:active { transform: translateX(1px) scale(0.99); }
-
-/* Top row: [favicon + domain] [timestamp] */
-.feed-card-top {
-  display: flex; align-items: center;
-  justify-content: space-between; gap: 10px;
-}
-.feed-card-source {
-  display: flex; align-items: center; gap: 8px; min-width: 0;
+.bubble-favicon {
+  width: 14px; height: 14px;
+  border-radius: 3px; flex-shrink: 0; opacity: 0.7;
 }
 
-/* Favicon */
-.feed-favicon {
-  width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0;
-  opacity: 0.75;
+.bubble-domain {
+  font-size: 11px; font-weight: 500; color: #A09DAE;
+  flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-/* Domain = secondary annotation, NOT the hero anymore */
-.feed-domain {
-  font-size: 12px; font-weight: 500; color: #A09DAE;
-  letter-spacing: 0.01em;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+.bubble-time {
+  font-size: 10px; color: #C8C5D0;
+  font-family: ui-monospace, Consolas, monospace; flex-shrink: 0;
 }
 
-/* Timestamp = HUD-style monospace data */
-.feed-time {
-  font-size: 11px; font-weight: 400;
-  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
-  color: #C0BDC8; flex-shrink: 0; letter-spacing: 0.02em;
-}
-
-/* Title = PRIMARY signal — the actual article name */
-.feed-title-text {
-  font-size: 15px; font-weight: 600; color: #1A1820;
+.bubble-title {
+  font-size: 14px; font-weight: 600; color: #1A1820;
   line-height: 1.4; letter-spacing: -0.01em;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -718,45 +691,61 @@ html, body, #root {
   overflow: hidden;
 }
 
-/* Bottom row: city chips + count badge */
-.feed-card-bottom {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 8px;
+.bubble-city {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 500; color: #6A5AF9;
 }
 
-/* City chips row */
-.feed-cities {
-  display: flex; align-items: center; gap: 4px;
-  flex-wrap: wrap; min-width: 0;
-}
-
-/* Location chip — smaller, less dominant than before */
-.feed-location {
-  display: inline-flex; align-items: center; gap: 3px;
-  font-size: 11px; font-weight: 400; color: #6A5AF9;
-  background: rgba(106,90,249,0.07);
-  border: 1px solid rgba(106,90,249,0.12);
-  padding: 2px 8px; border-radius: 20px;
-  letter-spacing: 0.01em; white-space: nowrap;
-}
-
-.feed-location--overflow {
-  color: #A09DAE;
-  background: rgba(160,157,174,0.08);
-  border-color: rgba(160,157,174,0.15);
-}
-
-/* Count = data indicator */
-.feed-badge {
-  font-size: 11px; font-weight: 700; color: #D97655;
+.bubble-count {
+  font-size: 10px; font-weight: 700; color: #D97655;
   background: rgba(217,118,85,0.1);
   border: 1px solid rgba(217,118,85,0.18);
-  padding: 2px 8px; border-radius: 20px;
-  font-variant-numeric: tabular-nums; white-space: nowrap; flex-shrink: 0;
+  padding: 1px 6px; border-radius: 20px;
+  font-variant-numeric: tabular-nums;
 }
 
-/* Legacy — hidden */
-.feed-info, .feed-right { display: none; }
+/* Reply bubbles — smaller, indented, "me too" */
+.bubble--reply {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(106,90,249,0.06);
+  border: 1px solid rgba(106,90,249,0.1);
+  border-radius: 12px 12px 12px 4px;
+  padding: 5px 10px;
+  max-width: 72%;
+  margin-left: 18px;
+}
+
+.bubble-reply-city {
+  font-size: 11px; font-weight: 500; color: #8880C8;
+}
+
+.bubble-count--reply { font-size: 10px; }
+
+/* Dark mode bubbles */
+[data-theme="dark"] .bubble--main {
+  background: #1C1E2A;
+  border-color: #2A2D3E;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+[data-theme="dark"] .bubble-thread:hover .bubble--main {
+  border-color: rgba(123,108,246,0.3);
+  box-shadow: 0 2px 8px rgba(123,108,246,0.12);
+}
+[data-theme="dark"] .bubble-domain  { color: #52506A; }
+[data-theme="dark"] .bubble-time    { color: #3A3D52; }
+[data-theme="dark"] .bubble-title   { color: #E8E6F2; }
+[data-theme="dark"] .bubble-city    { color: #7B6CF6; }
+[data-theme="dark"] .bubble--reply  {
+  background: rgba(123,108,246,0.08);
+  border-color: rgba(123,108,246,0.15);
+}
+[data-theme="dark"] .bubble-reply-city { color: #9A8CF8; }
+[data-theme="dark"] .bubble-thread { border-bottom-color: rgba(42,45,62,0.6); }
+
+/* Legacy selectors kept for safety */
+.feed-item, .feed-card-top, .feed-card-source, .feed-card-bottom,
+.feed-cities, .feed-location, .feed-badge, .feed-title-text,
+.feed-favicon, .feed-domain, .feed-time, .feed-info, .feed-right { display: none; }
 
 /* ── Region Panel ─────────────────────────────────────────────── */
 .region-panel {
