@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useSubmissionsStore } from "../store/submissionsStore";
+import { apiUrl } from "../lib/api";
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -43,7 +44,7 @@ export function ActivityFeed() {
   const setFocusLocation = useSubmissionsStore((s) => s.setFocusLocation);
   const hoveredUrl       = useSubmissionsStore((s) => s.hoveredUrl);
   const setHoveredUrl    = useSubmissionsStore((s) => s.setHoveredUrl);
-  const userPinId        = useSubmissionsStore((s) => s.userPinId);
+  useSubmissionsStore((s) => s.userPinId); // subscribed for future highlight feature
 
   const [titles, setTitles]       = useState<Record<string, string>>({});
   const [sort, setSort]           = useState<SortMode>("recent");
@@ -144,7 +145,7 @@ export function ActivityFeed() {
     for (const card of cards) {
       if (fetchedUrls.current.has(card.url)) continue;
       fetchedUrls.current.add(card.url);
-      fetch(`/api/metadata?url=${encodeURIComponent(card.url)}`)
+      fetch(apiUrl(`/api/metadata?url=${encodeURIComponent(card.url)}`))
         .then((r) => r.ok ? r.json() : null)
         .then((data) => {
           if (data?.title && data.title !== card.domain) {

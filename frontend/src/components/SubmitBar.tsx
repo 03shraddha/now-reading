@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { PinDropPayload } from "../hooks/usePinDrop";
 import { useSubmissionsStore } from "../store/submissionsStore";
+import { apiUrl } from "../lib/api";
 
 const PLACEHOLDERS = [
   "paste a news article…",
@@ -30,7 +31,7 @@ function useSubmitToken() {
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch("/api/token");
+      const res = await fetch(apiUrl("/api/token"));
       if (res.ok) {
         const data = await res.json();
         tokenRef.current  = data.token;
@@ -55,7 +56,7 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
   const [url, setUrl] = useState("");
   const [status, setStatus] = useState<"idle" | "previewing" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
-  const [submitCount, setSubmitCount] = useState(1);
+  const [_submitCount, setSubmitCount] = useState(1);
   const [metadata, setMetadata] = useState<Metadata | null>(null);
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const debounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -95,7 +96,7 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
 
     debounceRef.current = setTimeout(async () => {
       try {
-        const resp = await fetch(`/api/metadata?url=${encodeURIComponent(trimmed)}`);
+        const resp = await fetch(apiUrl(`/api/metadata?url=${encodeURIComponent(trimmed)}`));
         if (resp.ok) {
           const data: Metadata = await resp.json();
           setMetadata(data);
@@ -131,7 +132,7 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
     setErrorMsg("");
 
     try {
-      const res = await fetch("/api/submit", {
+      const res = await fetch(apiUrl("/api/submit"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

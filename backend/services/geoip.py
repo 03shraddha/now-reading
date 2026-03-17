@@ -1,4 +1,5 @@
 import random
+import time
 import httpx
 
 # Fallback cities used when the request comes from localhost (dev mode)
@@ -14,6 +15,10 @@ _INDIA_FALLBACK_CITIES = [
 ]
 
 _LOCAL_IPS = {"127.0.0.1", "::1", "localhost", ""}
+
+# Cache: ip -> (result_dict, expiry_timestamp). TTL = 24 hours.
+_GEO_CACHE: dict[str, tuple[dict, float]] = {}
+_GEO_TTL = 86_400
 
 
 def _add_jitter(lat: float, lng: float) -> tuple[float, float]:
@@ -36,6 +41,11 @@ async def lookup(ip: str) -> dict:
         location["lat"], location["lng"] = _add_jitter(location["lat"], location["lng"])
         return location
 
+    # Return cached result if still fresh
+    cached = _GEO_CACHE.get(ip)
+    if cached and time.time() < cached[1]:
+        return cached[0]
+
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             resp = await client.get(
@@ -46,17 +56,19 @@ async def lookup(ip: str) -> dict:
 
         if data.get("status") == "success":
             lat, lng = _add_jitter(data["lat"], data["lon"])
-            return {
+            result = {
                 "city": data.get("city", "Unknown"),
                 "country": data.get("country", "Unknown"),
                 "country_code": data.get("countryCode", ""),
                 "lat": lat,
                 "lng": lng,
             }
+            _GEO_CACHE[ip] = (result, time.time() + _GEO_TTL)
+            return result
     except Exception:
         pass
 
-    # GeoIP failed — fall back to random Indian city
+    # GeoIP failed — fall back to random Indian city (not cached; failures should be retried)
     location = random.choice(_INDIA_FALLBACK_CITIES).copy()
     location["lat"], location["lng"] = _add_jitter(location["lat"], location["lng"])
     return location

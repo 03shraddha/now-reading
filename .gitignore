@@ -8,6 +8,9 @@
 !frontend/tsconfig*.json
 !frontend/package*.json
 !frontend/eslint.config.js
+# Firebase project config files are safe to commit
+!firebase.json
+!firestore.indexes.json
 
 # Python
 __pycache__/

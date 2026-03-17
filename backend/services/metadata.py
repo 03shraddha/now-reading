@@ -2,6 +2,7 @@ import re
 import html as html_mod
 import socket
 import ipaddress
+import time
 import httpx
 from urllib.parse import urlparse
 
@@ -18,6 +19,10 @@ _BLOCKED_NETWORKS: list[ipaddress.IPv4Network | ipaddress.IPv6Network] = [
     ipaddress.ip_network("::1/128"),
     ipaddress.ip_network("fc00::/7"),
 ]
+
+# Cache: url -> (result_dict, expiry_timestamp). TTL = 10 minutes.
+_META_CACHE: dict[str, tuple[dict, float]] = {}
+_META_TTL = 600
 
 
 def _resolves_to_private(host: str) -> bool:
@@ -39,12 +44,17 @@ def _resolves_to_private(host: str) -> bool:
 
 async def fetch_metadata(url: str) -> dict:
     """Scrape og:title, og:description, and favicon for a URL. Never raises."""
+    # Return cached result if still fresh
+    cached = _META_CACHE.get(url)
+    if cached and time.time() < cached[1]:
+        return cached[0]
+
     parsed = urlparse(url)
     domain = (parsed.netloc or "").replace("www.", "")
     favicon_url = f"https://www.google.com/s2/favicons?domain={domain}&sz=32"
     fallback = {"title": domain, "description": None, "domain": domain, "favicon_url": favicon_url}
 
-    # SSRF guard — resolve hostname before any HTTP I/O
+    # SSRF guard — resolve hostname before any HTTP I/O (not cached; no real attempt made)
     if _resolves_to_private(parsed.hostname or ""):
         return fallback
 
@@ -53,6 +63,10 @@ async def fetch_metadata(url: str) -> dict:
         async with httpx.AsyncClient(timeout=6.0, follow_redirects=False) as client:
             resp = await client.get(url, headers=_HEADERS)
             if resp.status_code >= 400:
+                # Cache failed HTTP responses so we don't hammer unreachable URLs
+                if len(_META_CACHE) > 1000:
+                    _META_CACHE.clear()
+                _META_CACHE[url] = (fallback, time.time() + _META_TTL)
                 return fallback
             html = resp.text
     except Exception:
@@ -68,12 +82,17 @@ async def fetch_metadata(url: str) -> dict:
         or _first_match(html, r'<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\']+)["\']')
     )
 
-    return {
+    result = {
         "title": html_mod.unescape(title.strip())[:120],
         "description": html_mod.unescape(description.strip())[:200] if description else None,
         "domain": domain,
         "favicon_url": favicon_url,
     }
+    # Simple eviction: clear entire cache if it grows too large before inserting
+    if len(_META_CACHE) > 1000:
+        _META_CACHE.clear()
+    _META_CACHE[url] = (result, time.time() + _META_TTL)
+    return result
 
 
 def _first_match(html: str, pattern: str) -> str | None:

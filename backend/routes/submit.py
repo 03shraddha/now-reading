@@ -2,7 +2,6 @@ import hashlib
 import hmac
 import os
 import time
-from collections import defaultdict
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Request, Header, HTTPException
@@ -19,83 +18,124 @@ TOKEN_SECRET = os.getenv("SUBMIT_TOKEN_SECRET", "dev-secret-change-me")
 TOKEN_WINDOW = 300  # must match main.py
 
 
-def _make_token(window: int) -> str:
-    msg = f"submit:{window}".encode()
+def _make_token(window: int, nonce: str) -> str:
+    msg = f"submit:{window}:{nonce}".encode()
     return hmac.new(TOKEN_SECRET.encode(), msg, hashlib.sha256).hexdigest()
+
+
+def _check_nonce(nonce: str) -> bool:
+    """Return False if this nonce was already used (replay attack)."""
+    db = get_db()
+    ref = db.collection("used_nonces").document(nonce)
+    if ref.get().exists:
+        return False
+    expires = datetime.fromtimestamp(time.time() + TOKEN_WINDOW * 2, tz=timezone.utc)
+    ref.set({"expires_at": expires})
+    return True
 
 
 def _verify_token(token: str | None) -> bool:
     if not token:
         return False
+    # Expect format: "{token_hex}:{nonce}"
+    parts = token.split(":")
+    if len(parts) != 2:
+        return False
+    token_hex, nonce = parts[0], parts[1]
     now = int(time.time())
     window = now // TOKEN_WINDOW
     # Accept current window and the previous one (handles clock skew / near-boundary submits)
     for w in (window, window - 1):
-        if hmac.compare_digest(_make_token(w), token):
+        if hmac.compare_digest(_make_token(w, nonce), token_hex):
+            # HMAC valid — now check nonce hasn't been replayed
+            if not _check_nonce(nonce):
+                raise HTTPException(status_code=403, detail="invalid or missing submit token.")
             return True
     return False
 
 
 # ── Rate limits ────────────────────────────────────────────────────────────
-# Per-IP sliding windows (hashed IPs, never raw)
+# Firestore-backed sliding windows (hashed IPs, never raw)
 
-_rate_store:   dict[str, list[float]] = defaultdict(list)  # burst: 5 / 60 s
-_hourly_store: dict[str, list[float]] = defaultdict(list)  # hourly: 20 / 3600 s
 _RATE_LIMIT    = 5
 _RATE_WINDOW   = 60
 _HOURLY_LIMIT  = 20
 _HOURLY_WINDOW = 3600
 
 # Domain dedupe: same IP can't submit the same domain within 10 minutes
-_domain_store: dict[str, dict[str, float]] = defaultdict(dict)
 _DOMAIN_WINDOW = 10 * 60
 
 # URL-level flood: a single URL can't get more than N global submissions/hour
 # (prevents coordinated upvote brigading of one link)
-_url_flood_store: dict[str, list[float]] = defaultdict(list)
 _URL_FLOOD_LIMIT  = 60
 _URL_FLOOD_WINDOW = 3600
 
 
 def _check_rate_limit(ip_hash: str) -> None:
     now = time.time()
+    db = get_db()
+
     # Burst window
+    burst_ref = db.collection("rate_limits").document(f"burst_{ip_hash}")
+    burst_doc = burst_ref.get()
     burst_start = now - _RATE_WINDOW
-    _rate_store[ip_hash] = [t for t in _rate_store[ip_hash] if t > burst_start]
-    if len(_rate_store[ip_hash]) >= _RATE_LIMIT:
+    burst_times = [t for t in (burst_doc.get("times") or [] if burst_doc.exists else []) if t > burst_start]
+    if len(burst_times) >= _RATE_LIMIT:
         raise HTTPException(status_code=429, detail="too many submissions. please wait a moment.")
-    _rate_store[ip_hash].append(now)
+    burst_times.append(now)
+    burst_ref.set({
+        "times": burst_times,
+        "expires_at": datetime.fromtimestamp(now + _RATE_WINDOW, tz=timezone.utc),
+    })
 
     # Hourly cap
+    hourly_ref = db.collection("rate_limits").document(f"hourly_{ip_hash}")
+    hourly_doc = hourly_ref.get()
     hour_start = now - _HOURLY_WINDOW
-    _hourly_store[ip_hash] = [t for t in _hourly_store[ip_hash] if t > hour_start]
-    if len(_hourly_store[ip_hash]) >= _HOURLY_LIMIT:
+    hourly_times = [t for t in (hourly_doc.get("times") or [] if hourly_doc.exists else []) if t > hour_start]
+    if len(hourly_times) >= _HOURLY_LIMIT:
         raise HTTPException(status_code=429, detail="hourly submission limit reached. try again later.")
-    _hourly_store[ip_hash].append(now)
+    hourly_times.append(now)
+    hourly_ref.set({
+        "times": hourly_times,
+        "expires_at": datetime.fromtimestamp(now + _HOURLY_WINDOW, tz=timezone.utc),
+    })
 
 
 def _check_domain_dedupe(ip_hash: str, domain: str) -> None:
     now = time.time()
-    last = _domain_store[ip_hash].get(domain, 0)
-    if now - last < _DOMAIN_WINDOW:
+    db = get_db()
+    doc_ref = db.collection("rate_limits").document(f"domain_{ip_hash}_{domain}")
+    doc = doc_ref.get()
+    last = doc.get("last") if doc.exists else 0
+    if last and now - last < _DOMAIN_WINDOW:
         remaining = int((_DOMAIN_WINDOW - (now - last)) / 60)
         raise HTTPException(
             status_code=429,
             detail=f"you already shared from {domain} recently. try again in ~{remaining} min."
         )
-    _domain_store[ip_hash][domain] = now
+    doc_ref.set({
+        "last": now,
+        "expires_at": datetime.fromtimestamp(now + _DOMAIN_WINDOW, tz=timezone.utc),
+    })
 
 
 def _check_url_flood(normalized_url: str) -> None:
     """Prevent coordinated brigading of a single URL."""
     now = time.time()
+    url_hash_16 = hashlib.sha256(normalized_url.encode()).hexdigest()[:16]
+    db = get_db()
+    doc_ref = db.collection("rate_limits").document(f"url_{url_hash_16}")
+    doc = doc_ref.get()
     window_start = now - _URL_FLOOD_WINDOW
-    _url_flood_store[normalized_url] = [
-        t for t in _url_flood_store[normalized_url] if t > window_start
-    ]
-    if len(_url_flood_store[normalized_url]) >= _URL_FLOOD_LIMIT:
+    url_times = [t for t in (doc.get("times") or [] if doc.exists else []) if t > window_start]
+    if len(url_times) >= _URL_FLOOD_LIMIT:
         raise HTTPException(status_code=429, detail="this url is being submitted too frequently. try again later.")
-    _url_flood_store[normalized_url].append(now)
+    url_times.append(now)
+    doc_ref.set({
+        "times": url_times,
+        "expires_at": datetime.fromtimestamp(now + _URL_FLOOD_WINDOW, tz=timezone.utc),
+    })
 
 
 def _make_doc_id(normalized_url: str, country_code: str, city: str) -> str:

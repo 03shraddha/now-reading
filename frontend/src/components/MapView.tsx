@@ -1,5 +1,6 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import L from "leaflet";
+import { apiUrl } from "../lib/api";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
@@ -88,7 +89,7 @@ async function buildRichPopup(sub: Submission): Promise<string> {
     favicon_url: `https://www.google.com/s2/favicons?domain=${sub.domain}&sz=32`,
   };
   try {
-    const resp = await fetch(`/api/metadata?url=${encodeURIComponent(sub.url)}`);
+    const resp = await fetch(apiUrl(`/api/metadata?url=${encodeURIComponent(sub.url)}`));
     if (resp.ok) meta = await resp.json();
   } catch {}
 

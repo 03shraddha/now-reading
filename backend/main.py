@@ -2,6 +2,7 @@ import os
 import time
 import hmac
 import hashlib
+import secrets
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -47,8 +48,10 @@ TOKEN_WINDOW = 300  # 5 minutes
 
 
 def make_token(window: int) -> str:
-    msg = f"submit:{window}".encode()
-    return hmac.new(TOKEN_SECRET.encode(), msg, hashlib.sha256).hexdigest()
+    nonce = secrets.token_hex(4)
+    msg = f"submit:{window}:{nonce}".encode()
+    token_hex = hmac.new(TOKEN_SECRET.encode(), msg, hashlib.sha256).hexdigest()
+    return f"{token_hex}:{nonce}"
 
 
 @app.get("/api/token")
