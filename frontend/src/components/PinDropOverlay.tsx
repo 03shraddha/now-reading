@@ -5,7 +5,9 @@ interface Props {
   state: PinDropState;
 }
 
-const ACTIVE_PHASES = new Set(["impact", "focusing", "revealing", "staging", "active"]);
+// "active" is intentionally excluded — by then the real Leaflet marker is
+// visible and tracks the map. The overlay pin would drift on zoom/pan.
+const ACTIVE_PHASES = new Set(["impact", "focusing", "revealing", "staging"]);
 
 export function PinDropOverlay({ state }: Props) {
   const { phase, payload, targetX, targetY } = state;
