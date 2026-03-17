@@ -87,6 +87,7 @@ export default function App() {
       <header className="app-header">
         <span className="live-dot" />
         <span className="app-title">now reading</span>
+        <span className="app-tagline">share what you're reading &amp; discover what others are reading around the world</span>
         <span className="app-subtitle">
           {liveCount > 0 ? `${liveCount} live` : "live"}
         </span>

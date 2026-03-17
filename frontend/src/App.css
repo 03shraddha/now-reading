@@ -1316,10 +1316,26 @@ html, body, #root {
   font-weight: 400; /* Bangers is always bold by design */
   letter-spacing: 0.06em;
   color: #1A1820;
-  flex: 1;
   line-height: 1;
+  white-space: nowrap;
 }
 [data-theme="dark"] .app-title { color: #E8E6F2; }
+
+.app-tagline {
+  font-family: "Playfair Display", Georgia, serif;
+  font-style: italic;
+  font-size: 13px;
+  font-weight: 400;
+  color: #9896AA;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* hide on narrow viewports */
+  flex: 1;
+}
+[data-theme="dark"] .app-tagline { color: #52506A; }
 
 /* ══════════════════════════════════════════════════════════════
    PIN DROP ANIMATION SYSTEM
@@ -1448,6 +1464,8 @@ html, body, #root {
   .app-title {
     font-size: 18px;
   }
+
+  .app-tagline { display: none; }
 
   .app-subtitle {
     font-size: 12px;
