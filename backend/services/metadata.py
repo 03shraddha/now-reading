@@ -1,4 +1,5 @@
 import re
+import html as html_mod
 import socket
 import ipaddress
 import httpx
@@ -68,8 +69,8 @@ async def fetch_metadata(url: str) -> dict:
     )
 
     return {
-        "title": title.strip()[:120],
-        "description": description.strip()[:200] if description else None,
+        "title": html_mod.unescape(title.strip())[:120],
+        "description": html_mod.unescape(description.strip())[:200] if description else None,
         "domain": domain,
         "favicon_url": favicon_url,
     }

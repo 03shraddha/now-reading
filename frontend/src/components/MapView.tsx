@@ -30,17 +30,31 @@ function dotColor(count: number): "cool" | "warm" | "hot" {
   return "cool";
 }
 
-// Special icon for the user's own drop — larger, glowing, with a label
+// Special icon for the user's own drop — glowing indigo dot (no label, popup handles that)
 function makeUserPinIcon() {
   return L.divIcon({
     className: "",
-    html: `<div class="user-pin-wrapper">
-      <div class="user-pin-label">your drop</div>
-      <div class="reading-dot reading-dot--user"></div>
-    </div>`,
-    iconSize:   [72, 52],
-    iconAnchor: [36, 44],
+    html: `<div class="reading-dot reading-dot--user"></div>`,
+    iconSize:   [20, 20],
+    iconAnchor: [10, 10],
   });
+}
+
+// Build the card shown above the user's dropped pin
+function buildUserDropPopupHtml(sub: Submission): string {
+  const banner = useSubmissionsStore.getState().submissionBanner;
+  const title     = banner?.title     ?? sub.domain;
+  const favicon   = banner?.favicon_url ?? `https://www.google.com/s2/favicons?domain=${sub.domain}&sz=32`;
+  const city      = banner?.city      ?? sub.city;
+  return `<div class="user-drop-popup">
+    <div class="user-drop-popup__label">your drop</div>
+    <div class="user-drop-popup__header">
+      <img src="${favicon}" class="user-drop-popup__favicon" onerror="this.style.display='none'" />
+      <span class="user-drop-popup__domain">${sub.domain}</span>
+    </div>
+    <div class="user-drop-popup__title">${title}</div>
+    <div class="user-drop-popup__city">📍 ${city}</div>
+  </div>`;
 }
 
 // Dot marker — circle with optional pulse or highlight ring
@@ -315,8 +329,14 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
           icon: isUserPin ? makeUserPinIcon() : makeDotIcon(sub.count, isRecent(sub)),
         });
         marker.on("click", async () => {
-          const html = await buildRichPopup(sub);
-          marker.bindPopup(html).openPopup();
+          if (id === userPinIdRef.current) {
+            marker.bindPopup(buildUserDropPopupHtml(sub), {
+              className: "user-drop-leaflet-popup", closeButton: true, offset: [0, -14],
+            }).openPopup();
+          } else {
+            const html = await buildRichPopup(sub);
+            marker.bindPopup(html).openPopup();
+          }
         });
         marker.on("mouseover", () => setHoveredUrl(sub.url));
         marker.on("mouseout",  () => setHoveredUrl(null));
@@ -324,8 +344,17 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
         clusterGroup.addLayer(marker);
         markersRef.current.set(id, marker);
 
+        // Auto-open card popup for the user's own pin
+        if (isUserPin) {
+          setTimeout(() => {
+            marker.bindPopup(buildUserDropPopupHtml(sub), {
+              className: "user-drop-leaflet-popup", closeButton: true, offset: [0, -14],
+            }).openPopup();
+          }, 300); // brief delay so map finishes flying first
+        }
+
         // Remove pulse after animation completes (900ms)
-        if (isRecent(sub)) {
+        if (isRecent(sub) && !isUserPin) {
           setTimeout(() => {
             marker.setIcon(makeDotIcon(sub.count, false));
           }, 950);
@@ -376,6 +405,12 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
       if (!sub) continue;
       if (id === userPinId) {
         marker.setIcon(makeUserPinIcon());
+        // Open card popup (marker already existed before userPinId was set)
+        setTimeout(() => {
+          marker.bindPopup(buildUserDropPopupHtml(sub), {
+            className: "user-drop-leaflet-popup", closeButton: true, offset: [0, -14],
+          }).openPopup();
+        }, 300);
       } else {
         marker.setIcon(makeDotIcon(sub.count, false, false));
       }

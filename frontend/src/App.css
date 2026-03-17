@@ -394,6 +394,46 @@ html, body, #root {
   to   { opacity: 1; transform: translateY(0)   scale(1); }
 }
 
+/* ── User-drop popup card (Leaflet popup above the user's pin) ── */
+.user-drop-leaflet-popup .leaflet-popup-content-wrapper {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(106,90,249,0.22), 0 2px 8px rgba(0,0,0,0.10);
+  border: 1.5px solid rgba(106,90,249,0.25);
+  padding: 0;
+  overflow: hidden;
+}
+.user-drop-leaflet-popup .leaflet-popup-content {
+  margin: 0;
+  min-width: 200px;
+  max-width: 260px;
+}
+.user-drop-leaflet-popup .leaflet-popup-tip-container { display: none; }
+.user-drop-popup {
+  padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.user-drop-popup__label {
+  font-size: 10px; font-weight: 700; color: #6A5AF9;
+  text-transform: uppercase; letter-spacing: 0.1em;
+}
+.user-drop-popup__header {
+  display: flex; align-items: center; gap: 7px;
+}
+.user-drop-popup__favicon {
+  width: 16px; height: 16px; border-radius: 4px; flex-shrink: 0;
+}
+.user-drop-popup__domain {
+  font-size: 12px; font-weight: 500; color: #A09DAE;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.user-drop-popup__title {
+  font-size: 14px; font-weight: 600; color: #1A1820; line-height: 1.35;
+}
+.user-drop-popup__city {
+  font-size: 12px; color: #6B6A7A;
+}
+
 /* One-shot flash on new submission */
 .reading-dot--pulse {
   animation: marker-scene-flash 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
@@ -971,7 +1011,7 @@ html, body, #root {
 }
 
 .bubble-domain {
-  font-size: 11px; font-weight: 500; color: #A09DAE;
+  font-size: 13px; font-weight: 500; color: #A09DAE;
   flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
@@ -981,7 +1021,7 @@ html, body, #root {
 }
 
 .bubble-title {
-  font-size: 14px; font-weight: 600; color: #1A1820;
+  font-size: 15px; font-weight: 600; color: #1A1820;
   line-height: 1.4; letter-spacing: -0.01em;
   display: -webkit-box;
   -webkit-line-clamp: 2;
