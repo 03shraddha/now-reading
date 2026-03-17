@@ -1314,11 +1314,11 @@ html, body, #root {
 [data-theme="dark"] .submit-hero-error { color: #E0546A; }
 [data-theme="dark"] .submit-hero-success { color: #60C4A0; }
 
-/* Mini pill */
-[data-theme="dark"] .submit-mini-form { background: rgba(14,15,22,0.88); border-color: rgba(42,45,62,0.8); }
-[data-theme="dark"] .submit-mini-form:focus-within { border-color: rgba(123,108,246,0.45); box-shadow: 0 4px 24px rgba(123,108,246,0.2); }
+/* Mini pill — brighter in dark mode so it's visible against dark map */
+[data-theme="dark"] .submit-mini-form { background: rgba(30,33,48,0.97); border-color: rgba(80,84,110,0.9); box-shadow: 0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(80,84,110,0.4); }
+[data-theme="dark"] .submit-mini-form:focus-within { border-color: rgba(123,108,246,0.6); box-shadow: 0 4px 24px rgba(123,108,246,0.25), 0 0 0 1px rgba(123,108,246,0.3); }
 [data-theme="dark"] .submit-mini-input { color: #E8E6F2; }
-[data-theme="dark"] .submit-mini-input::placeholder { color: #343754; }
+[data-theme="dark"] .submit-mini-input::placeholder { color: #6B6880; }
 [data-theme="dark"] .submit-mini-btn { background: #7B6CF6; }
 [data-theme="dark"] .submit-mini-success { color: #60C4A0; }
 

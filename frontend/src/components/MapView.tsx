@@ -13,8 +13,8 @@ import type { Submission } from "../types";
 // Track which submission each marker represents, for hover highlighting
 const markerUrlMap = new Map<L.Marker, string>(); // marker → url
 
-const WORLD_CENTER: L.LatLngTuple = [20, 10];
-const DEFAULT_ZOOM = 2;
+const WORLD_CENTER: L.LatLngTuple = [22, 80]; // India
+const DEFAULT_ZOOM = 5; // shows India + neighbours; user can zoom out to see global
 
 // ── Icon helpers ───────────────────────────────────────────────
 // Scale = SIZE only, not color noise (PRD requirement)
