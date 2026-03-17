@@ -24,6 +24,15 @@ interface Props {
   onPinDrop?: (payload: PinDropPayload) => void;
 }
 
+// Returns true when the response is HTML — Render's cold-start wake-up page
+async function isColdStart(res: Response): Promise<boolean> {
+  const ct = res.headers.get("content-type") ?? "";
+  if (ct.includes("text/html")) return true;
+  // Also catches cases where content-type is missing but body is HTML
+  const text = await res.clone().text();
+  return text.trimStart().startsWith("<");
+}
+
 // Fetch a short-lived HMAC token from the backend and keep it refreshed
 function useSubmitToken() {
   const tokenRef    = useRef<string | null>(null);
@@ -54,7 +63,7 @@ function useSubmitToken() {
 
 export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
   const [url, setUrl] = useState("");
-  const [status, setStatus] = useState<"idle" | "previewing" | "loading" | "success" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "previewing" | "loading" | "success" | "error" | "waking">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [_submitCount, setSubmitCount] = useState(1);
   const [metadata, setMetadata] = useState<Metadata | null>(null);
@@ -132,6 +141,19 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
     setErrorMsg("");
 
     try {
+      // If token is missing, try fetching it now (server may have been cold)
+      if (!tokenRef.current) {
+        const tokenRes = await fetch(apiUrl("/api/token"));
+        if (await isColdStart(tokenRes)) {
+          setStatus("waking");
+          return;
+        }
+        if (tokenRes.ok) {
+          const data = await tokenRes.json();
+          tokenRef.current = data.token;
+        }
+      }
+
       const res = await fetch(apiUrl("/api/submit"), {
         method: "POST",
         headers: {
@@ -140,6 +162,11 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
         },
         body: JSON.stringify({ url: trimmed }),
       });
+
+      if (await isColdStart(res)) {
+        setStatus("waking");
+        return;
+      }
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -196,6 +223,7 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
 
   const placeholder = PLACEHOLDERS[placeholderIdx];
   const showPreview = status === "previewing" && metadata;
+  const isWaking = status === "waking";
 
   if (collapsed) {
     // Mini pill in bottom-right corner
@@ -242,7 +270,7 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
             value={url}
             onChange={(e) => {
               setUrl(e.target.value);
-              if (status === "error") setStatus("idle");
+              if (status === "error" || status === "waking") setStatus("idle");
             }}
             disabled={status === "loading"}
             autoComplete="off"
@@ -255,7 +283,7 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
             className="submit-hero-btn"
             disabled={status === "loading" || !url.trim()}
           >
-            {status === "loading" ? "dropping pin…" : showPreview ? "share to map" : "share"}
+            {status === "loading" ? "dropping pin…" : isWaking ? "try again" : showPreview ? "share to map" : "share"}
           </button>
         </form>
 
@@ -275,6 +303,11 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
         )}
 
         {status === "error" && <div className="submit-hero-error">{errorMsg}</div>}
+        {status === "waking" && (
+          <div className="submit-hero-error">
+            server is waking up — please try again in ~30 seconds
+          </div>
+        )}
       </div>
     </div>
   );
