@@ -28,6 +28,8 @@ type SortMode = "recent" | "a-z" | "z-a";
 interface FeedCard {
   url:         string;
   domain:      string;
+  title:       string | null;
+  favicon_url: string | null;
   cities:      { name: string; flag: string; count: number }[];
   totalCount:  number;
   latestAt:    Date;
@@ -39,8 +41,11 @@ interface FeedCard {
 // ── Component ──────────────────────────────────────────────────
 
 export function ActivityFeed() {
-  const submissions      = useSubmissionsStore((s) => s.submissions);
-  const mapBounds        = useSubmissionsStore((s) => s.mapBounds);
+  const submissions        = useSubmissionsStore((s) => s.submissions);
+  const mapBounds          = useSubmissionsStore((s) => s.mapBounds);
+  const mapZoom            = useSubmissionsStore((s) => s.mapZoom);
+  const mobileSheetOpen    = useSubmissionsStore((s) => s.mobileSheetOpen);
+  const setMobileSheetOpen = useSubmissionsStore((s) => s.setMobileSheetOpen);
   const setFocusLocation = useSubmissionsStore((s) => s.setFocusLocation);
   const hoveredUrl       = useSubmissionsStore((s) => s.hoveredUrl);
   const setHoveredUrl    = useSubmissionsStore((s) => s.setHoveredUrl);
@@ -49,14 +54,53 @@ export function ActivityFeed() {
   const [titles, setTitles]       = useState<Record<string, string>>({});
   const [sort, setSort]           = useState<SortMode>("recent");
   const [cityQuery, setCityQuery] = useState("");
-  const fetchedUrls                = useRef<Set<string>>(new Set());
+  const fetchedUrls               = useRef<Set<string>>(new Set());
+
+  // ── Drag-to-resize bottom sheet ──────────────────────────────
+  const PEEK_H   = 88;   // px — handle + title only
+  const FULL_VH  = 0.55; // default open = 55vh (both map + links visible)
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const dragRef  = useRef<{ startY: number; startH: number } | null>(null);
+
+  function getFullH() { return Math.round(window.innerHeight * FULL_VH); }
+
+  function snapSheet(currentH: number) {
+    const mid = (PEEK_H + getFullH()) / 2;
+    const open = currentH > mid;
+    setMobileSheetOpen(open);
+    if (sheetRef.current) {
+      sheetRef.current.style.height = "";      // let CSS class take over
+      sheetRef.current.style.transition = "";  // restore CSS transition
+    }
+  }
+
+  function onHandleTouchStart(e: React.TouchEvent) {
+    if (!sheetRef.current) return;
+    const currentH = sheetRef.current.getBoundingClientRect().height;
+    dragRef.current = { startY: e.touches[0].clientY, startH: currentH };
+    sheetRef.current.style.transition = "none"; // disable during drag
+  }
+
+  function onHandleTouchMove(e: React.TouchEvent) {
+    if (!dragRef.current || !sheetRef.current) return;
+    const dy   = dragRef.current.startY - e.touches[0].clientY; // drag up = positive
+    const newH = Math.max(PEEK_H, Math.min(getFullH(), dragRef.current.startH + dy));
+    sheetRef.current.style.height = `${newH}px`;
+  }
+
+  function onHandleTouchEnd() {
+    if (!dragRef.current || !sheetRef.current) return;
+    const currentH = sheetRef.current.getBoundingClientRect().height;
+    dragRef.current = null;
+    snapSheet(currentH);
+  }
 
   const userSubmittedUrl = useSubmissionsStore((s) => s.userSubmittedUrl);
   const myUrl = userSubmittedUrl;
 
-  // ── Viewport filter — show reads from the current map view ───
+  // ── Viewport filter — only apply when zoomed in; always fall back to global ───
   const inBoundsSubmissions = useMemo(() => {
-    if (!mapBounds) return submissions;
+    if (!mapBounds || mapZoom < 5) return submissions; // world/region zoom → show all
     const filtered = new Map();
     for (const [id, sub] of submissions) {
       if (
@@ -64,8 +108,9 @@ export function ActivityFeed() {
         sub.lng >= mapBounds.west  && sub.lng <= mapBounds.east
       ) filtered.set(id, sub);
     }
-    return filtered;
-  }, [submissions, mapBounds]);
+    // If viewport has nothing, fall back to global so feed is never empty
+    return filtered.size > 0 ? filtered : submissions;
+  }, [submissions, mapBounds, mapZoom]);
 
   // ── Group by URL ───────────────────────────────────────────
   const allCards: FeedCard[] = useMemo(() => {
@@ -84,9 +129,15 @@ export function ActivityFeed() {
           entry.lng = sub.lng;
         }
         if (sub.updated_at < entry.firstSeenAt) entry.firstSeenAt = sub.updated_at;
+        // Fill in title/favicon from newer docs if not yet set
+        if (!entry.title && sub.title) entry.title = sub.title;
+        if (!entry.favicon_url && sub.favicon_url) entry.favicon_url = sub.favicon_url;
       } else {
         map.set(sub.url, {
-          url: sub.url, domain: sub.domain, cities: [city],
+          url: sub.url, domain: sub.domain,
+          title: sub.title ?? null,
+          favicon_url: sub.favicon_url ?? null,
+          cities: [city],
           totalCount: sub.count, latestAt: sub.updated_at, firstSeenAt: sub.updated_at,
           lat: sub.lat, lng: sub.lng,
         });
@@ -158,12 +209,23 @@ export function ActivityFeed() {
     }
   }, [cards]);
 
-  if (allCards.length === 0) return null;
+  // Never hide the feed entirely — always render the shell so the bottom sheet is accessible
+  if (submissions.size === 0) return null;
 
   return (
-    <div className="activity-feed">
-      {/* Header */}
-      <div className="feed-header">
+    <div className="activity-feed" ref={sheetRef}>
+      {/* Header — tap to toggle, drag to resize */}
+      <div
+        className="feed-header"
+        onTouchStart={onHandleTouchStart}
+        onTouchMove={onHandleTouchMove}
+        onTouchEnd={onHandleTouchEnd}
+        onClick={(e) => {
+          const t = e.target as HTMLElement;
+          if (t.closest(".feed-sort-tabs, .feed-city-input-wrap")) return;
+          setMobileSheetOpen(!mobileSheetOpen);
+        }}
+      >
         <div className="feed-header-top">
           <span className="feed-title">
             {regionName ? `top reads in ${regionName}` : "recent reads"}
@@ -189,7 +251,7 @@ export function ActivityFeed() {
           <input
             id="feed-city-input"
             className={`feed-city-input${cityQuery ? " feed-city-input--active" : ""}`}
-            placeholder="filter by your city :)…"
+            placeholder="filter by your city :)"
             value={cityQuery}
             onChange={(e) => setCityQuery(e.target.value)}
             spellCheck={false}
@@ -205,7 +267,8 @@ export function ActivityFeed() {
       ) : (
         <div className="feed-list">
           {cards.map((card, i) => {
-            const title     = titles[card.url];
+            // Prefer stored title from Firestore, fall back to API fetch, then domain
+            const title     = card.title || titles[card.url] || card.domain;
             const isMyCard  = card.url === myUrl;
             const isHovered = card.url === hoveredUrl;
             const citiesSorted = [...card.cities].sort((a, b) => b.count - a.count);
@@ -228,7 +291,7 @@ export function ActivityFeed() {
                 <div className={`bubble bubble--main${isMyCard ? " bubble--mine" : ""}`}>
                   <div className="bubble-meta">
                     <img
-                      src={`https://www.google.com/s2/favicons?domain=${card.domain}&sz=32`}
+                      src={card.favicon_url || `https://www.google.com/s2/favicons?domain=${card.domain}&sz=32`}
                       className="bubble-favicon"
                       alt=""
                       onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
@@ -236,7 +299,7 @@ export function ActivityFeed() {
                     <span className="bubble-domain">{card.domain}</span>
                     <span className="bubble-time">{timeAgo(card.latestAt)}</span>
                   </div>
-                  {title && <div className="bubble-title">{title}</div>}
+                  <div className="bubble-title">{title}</div>
                   <div className="bubble-city">
                     {lead.flag} {lead.name}
                     {lead.count > 1 && <span className="bubble-count">{fmtCount(lead.count)}</span>}

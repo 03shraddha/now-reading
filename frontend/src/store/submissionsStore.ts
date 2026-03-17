@@ -9,21 +9,24 @@ interface SubmissionBanner {
   city: string;
 }
 
-const MAX_AGE_MS = 30 * 60 * 1000;
+const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30-day in-memory window
 
 interface SubmissionsState {
   submissions:      Map<string, Submission>;
   focusLocation:    [number, number] | null;
   mapBounds:        MapBounds | null;
+  mapZoom:          number;
   highlightedId:    string | null;
   hoveredUrl:       string | null;
   userPinId:        string | null;
   viewedLinks:      Set<string>;
   autoFollow:       boolean;
 
-  upsertSubmission: (s: Submission) => void;
+  upsertSubmission:  (s: Submission) => void;
+  removeSubmission:  (id: string) => void;
   setFocusLocation: (loc: [number, number] | null) => void;
   setMapBounds:     (bounds: MapBounds | null) => void;
+  setMapZoom:       (zoom: number) => void;
   setHighlightedId: (id: string | null) => void;
   setHoveredUrl:    (url: string | null) => void;
   setUserPinId:     (id: string | null) => void;
@@ -35,12 +38,15 @@ interface SubmissionsState {
   setSubmissionBanner: (b: SubmissionBanner | null) => void;
   userSubmittedUrl: string | null;
   setUserSubmittedUrl: (url: string | null) => void;
+  mobileSheetOpen: boolean;
+  setMobileSheetOpen: (v: boolean) => void;
 }
 
 export const useSubmissionsStore = create<SubmissionsState>((set) => ({
   submissions:   new Map(),
   focusLocation: null,
   mapBounds:     null,
+  mapZoom:       2,
   highlightedId: null,
   hoveredUrl:    null,
   userPinId:     null,
@@ -48,6 +54,7 @@ export const useSubmissionsStore = create<SubmissionsState>((set) => ({
   autoFollow:    false,
   submissionBanner: null,
   userSubmittedUrl: null,
+  mobileSheetOpen: true,  // default open so links are visible on first load
 
   upsertSubmission: (s) =>
     set((state) => {
@@ -56,9 +63,17 @@ export const useSubmissionsStore = create<SubmissionsState>((set) => ({
       return { submissions: next };
     }),
 
+  removeSubmission: (id) =>
+    set((state) => {
+      const next = new Map(state.submissions);
+      next.delete(id);
+      return { submissions: next };
+    }),
+
   setFocusLocation: (loc) => set({ focusLocation: loc }),
 
   setMapBounds: (bounds) => set({ mapBounds: bounds }),
+  setMapZoom:   (zoom)   => set({ mapZoom: zoom }),
 
   setHighlightedId: (id) => set({ highlightedId: id }),
 
@@ -77,6 +92,7 @@ export const useSubmissionsStore = create<SubmissionsState>((set) => ({
 
   setSubmissionBanner: (b) => set({ submissionBanner: b }),
   setUserSubmittedUrl: (url) => set({ userSubmittedUrl: url }),
+  setMobileSheetOpen: (v) => set({ mobileSheetOpen: v }),
 
   pruneOld: () =>
     set((state) => {

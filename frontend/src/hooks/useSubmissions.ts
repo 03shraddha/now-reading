@@ -4,14 +4,17 @@ import { db } from "../firebase";
 import { useSubmissionsStore } from "../store/submissionsStore";
 import type { Submission } from "../types";
 
+
 const LOAD_LIMIT = 200;
-const LOOKBACK_DAYS = 7;
+const LOOKBACK_DAYS = 30;
 
 function docToSubmission(id: string, data: any): Submission {
   return {
     id,
     url: data.url,
     domain: data.domain,
+    title: data.title ?? null,           // stored by backend
+    favicon_url: data.favicon_url ?? null, // stored by backend
     city: data.city,
     country: data.country,
     country_code: data.country_code,
@@ -23,8 +26,9 @@ function docToSubmission(id: string, data: any): Submission {
 }
 
 export function useSubmissions() {
-  const upsertSubmission = useSubmissionsStore((s) => s.upsertSubmission);
-  const pruneOld = useSubmissionsStore((s) => s.pruneOld);
+  const upsertSubmission  = useSubmissionsStore((s) => s.upsertSubmission);
+  const removeSubmission  = useSubmissionsStore((s) => s.removeSubmission);
+  const pruneOld          = useSubmissionsStore((s) => s.pruneOld);
   // Tracks whether we've already fetched page 2 for this mount
   const page2Fetched = useRef(false);
 
@@ -41,6 +45,8 @@ export function useSubmissions() {
       snapshot.docChanges().forEach((change) => {
         if (change.type === "added" || change.type === "modified") {
           upsertSubmission(docToSubmission(change.doc.id, change.doc.data()));
+        } else if (change.type === "removed") {
+          removeSubmission(change.doc.id);
         }
       });
       pruneOld();

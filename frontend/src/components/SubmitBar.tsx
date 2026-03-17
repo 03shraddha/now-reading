@@ -2,14 +2,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import type { PinDropPayload } from "../hooks/usePinDrop";
 import { useSubmissionsStore } from "../store/submissionsStore";
 import { apiUrl } from "../lib/api";
-import { useTypewriter } from "../hooks/useTypewriter";
-
-const HERO_PHRASES = [
-  "what are you reading right now?",
-  "share a link, drop a pin :)",
-  "discover what the world is reading",
-  "reading anything good lately?",
-];
 
 const PLACEHOLDERS = [
   "paste a news article…",
@@ -31,6 +23,7 @@ interface Props {
   collapsed: boolean;
   onFirstSubmit: () => void;
   onPinDrop?: (payload: PinDropPayload) => void;
+  heroText: string;
 }
 
 // Returns true when the response is HTML — Render's cold-start wake-up page
@@ -70,7 +63,7 @@ function useSubmitToken() {
   return tokenRef;
 }
 
-export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
+export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Props) {
   const [url, setUrl] = useState("");
   const [status, setStatus] = useState<"idle" | "previewing" | "loading" | "success" | "error" | "waking">("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -194,11 +187,12 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
         setTimeout(() => useSubmissionsStore.getState().setUserPinId(null), 10 * 60 * 1000);
       }
 
-      // Set submission banner — use prefetched metadata if available, else fall back to API response
+      // Set submission banner — prefer API response fields (backend now stores title/favicon),
+      // then fall back to prefetched metadata, then to generic fallbacks
       const bannerDomain = data.domain ?? metadata?.domain ?? new URL(trimmed).hostname.replace("www.", "");
       useSubmissionsStore.getState().setSubmissionBanner({
-        favicon_url: metadata?.favicon_url ?? `https://www.google.com/s2/favicons?domain=${bannerDomain}&sz=32`,
-        title: metadata?.title ?? bannerDomain,
+        favicon_url: data.favicon_url ?? metadata?.favicon_url ?? `https://www.google.com/s2/favicons?domain=${bannerDomain}&sz=32`,
+        title: data.title ?? metadata?.title ?? bannerDomain,
         domain: bannerDomain,
         city: data.city ?? "",
       });
@@ -233,7 +227,6 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
   const placeholder = PLACEHOLDERS[placeholderIdx];
   const showPreview = status === "previewing" && metadata;
   const isWaking    = status === "waking";
-  const heroText    = useTypewriter(HERO_PHRASES);
 
   if (collapsed) {
     // Mini pill in bottom-right corner

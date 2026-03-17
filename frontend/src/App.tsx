@@ -5,14 +5,23 @@ import { ActivityFeed }    from "./components/ActivityFeed";
 import { PinDropOverlay }  from "./components/PinDropOverlay";
 import { usePinDrop }      from "./hooks/usePinDrop";
 import { useSubmissionsStore } from "./store/submissionsStore";
-import { useTypewriter }   from "./hooks/useTypewriter";
+import { useSyncedTypewriters } from "./hooks/useTypewriter";
 import type { MapViewHandle }  from "./components/MapView";
 import "./App.css";
 
+// Must be same length — paired phrases advance together in sync
 const TAGLINE_PHRASES = [
   "share what you're reading & discover what others are reading around the world",
   "drop a link. see the world read.",
   "what's everyone reading right now?",
+  "discover what the world is reading",
+];
+
+const HERO_PHRASES = [
+  "what are you reading right now?",
+  "share a link, drop a pin :)",
+  "reading anything good lately?",
+  "share what you're reading",
 ];
 
 function SubmissionBanner() {
@@ -48,9 +57,17 @@ export default function App() {
   const mapViewRef                = useRef<MapViewHandle | null>(null);
   const { state: pinState, triggerDrop } = usePinDrop(mapViewRef);
 
-  const submissions      = useSubmissionsStore((s) => s.submissions);
-  const liveCount        = submissions.size;
-  const submissionBanner = useSubmissionsStore((s) => s.submissionBanner);
+  const submissions        = useSubmissionsStore((s) => s.submissions);
+  const liveCount          = submissions.size;
+  const submissionBanner   = useSubmissionsStore((s) => s.submissionBanner);
+  const mobileSheetOpen    = useSubmissionsStore((s) => s.mobileSheetOpen);
+  const setMobileSheetOpen = useSubmissionsStore((s) => s.setMobileSheetOpen);
+
+  // Collapse feed while hero card is showing so they don't overlap.
+  // Expand it once the hero is dismissed.
+  useEffect(() => {
+    setMobileSheetOpen(submitted);
+  }, [submitted, setMobileSheetOpen]);
 
   // Sync theme attribute for CSS overrides
   useEffect(() => {
@@ -76,7 +93,7 @@ export default function App() {
     };
   }, []);
 
-  const tagline = useTypewriter(TAGLINE_PHRASES, { typeSpeed: 35, deleteSpeed: 18, pauseAfter: 2400 });
+  const [tagline, heroText] = useSyncedTypewriters(TAGLINE_PHRASES, HERO_PHRASES, { typeSpeed: 40, deleteSpeed: 20, pauseAfter: 2200 });
 
   function toggleTheme() {
     setTheme((t) => (t === "dark" ? "light" : "dark"));
@@ -111,7 +128,7 @@ export default function App() {
       <SubmissionBanner />
 
       {/* ── Map + overlays ──────────────────────────────── */}
-      <div className="map-container">
+      <div className={`map-container${mobileSheetOpen ? " map-container--sheet-open" : ""}`}>
         <MapView
           ref={mapViewRef}
           theme={theme}
@@ -121,6 +138,7 @@ export default function App() {
           collapsed={submitted}
           onFirstSubmit={() => setSubmitted(true)}
           onPinDrop={triggerDrop}
+          heroText={heroText}
         />
         <ActivityFeed />
       </div>

@@ -197,6 +197,7 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
     const map = L.map(mapEl, {
       center: WORLD_CENTER,
       zoom: DEFAULT_ZOOM,
+      minZoom: 2,       // prevents zooming out past world view where tiles leave blank edges
       zoomControl: true,
     });
 
@@ -292,9 +293,11 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
         north: b.getNorth(), south: b.getSouth(),
         east:  b.getEast(),  west:  b.getWest(),
       });
+      useSubmissionsStore.getState().setMapZoom(map.getZoom());
     };
     emitBounds();
     onZoomChangeRef.current?.(DEFAULT_ZOOM);
+    useSubmissionsStore.getState().setMapZoom(DEFAULT_ZOOM);
 
     // ── Scene-cut: panning state on container ─────────────────
     // CSS dims tile pane and markers stay full opacity (parallax depth)

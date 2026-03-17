@@ -2,6 +2,8 @@ export interface Submission {
   id: string;
   url: string;
   domain: string;
+  title: string | null;       // stored by backend (may be null for older docs)
+  favicon_url: string | null; // stored by backend (may be null for older docs)
   city: string;
   country: string;
   country_code: string;

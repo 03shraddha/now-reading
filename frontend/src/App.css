@@ -197,7 +197,8 @@ html, body, #root {
 .map-container .leaflet-container {
   height: 100%;
   width: 100%;
-  background: transparent;
+  /* Match CARTO Positron ocean colour so viewport edges beyond tiles are seamless */
+  background: #a6d5e8;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -522,18 +523,27 @@ html, body, #root {
 .leaflet-popup-close-button:hover { color: #1A1820 !important; }
 
 /* ── Popup content ────────────────────────────────────────────── */
-.map-popup { padding: 20px 20px 18px; min-width: 260px; max-width: 340px; font-family: inherit; }
-@media (max-width: 639px) {
-  .map-popup { min-width: auto; max-width: calc(100vw - 40px); }
+.map-popup {
+  padding: 16px 16px 14px;
+  min-width: 240px; max-width: 320px;
+  font-family: inherit;
 }
-.popup-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.popup-favicon { width: 22px; height: 22px; border-radius: 4px; flex-shrink: 0; }
-.popup-domain  { font-size: 13px; color: #A09DAE; font-weight: 400; }
-.popup-title   { font-size: 17px; font-weight: 600; color: #1A1820; line-height: 1.4; margin-bottom: 7px; }
-.popup-desc    { font-size: 13px; color: #6B6A7A; line-height: 1.5; margin-bottom: 12px; }
+.popup-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.popup-favicon { width: 20px; height: 20px; border-radius: 4px; flex-shrink: 0; }
+.popup-domain  { font-size: 12px; color: #A09DAE; font-weight: 400; }
+.popup-title   {
+  font-size: 15px; font-weight: 600; color: #1A1820; line-height: 1.4; margin-bottom: 8px;
+  /* Clamp to 3 lines max so long titles never explode the card */
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.popup-desc    {
+  font-size: 12px; color: #6B6A7A; line-height: 1.5; margin-bottom: 10px;
+  /* Clamp description to 2 lines */
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
 .popup-meta {
   display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 14px; padding-top: 10px; border-top: 1px solid #E2DFDA;
+  margin-bottom: 12px; padding-top: 8px; border-top: 1px solid #E2DFDA;
 }
 .popup-city  { font-size: 12px; color: #A09DAE; }
 .popup-count {
@@ -544,11 +554,28 @@ html, body, #root {
 .popup-link {
   display: block; background: rgba(106,90,249,0.08);
   border: 1px solid rgba(106,90,249,0.22); border-radius: 10px;
-  padding: 9px 16px; font-size: 14px; font-weight: 600;
+  padding: 10px 16px; font-size: 14px; font-weight: 600;
   color: #6A5AF9; text-decoration: none; text-align: center;
-  transition: background 0.3s ease, border-color 0.3s ease;
+  transition: background 0.2s, border-color 0.2s;
+  /* Large tap target on mobile */
+  min-height: 44px; display: flex; align-items: center; justify-content: center;
 }
 .popup-link:hover { background: rgba(106,90,249,0.16); border-color: rgba(106,90,249,0.4); }
+
+/* ── Mobile popup: compact, never taller than half screen ── */
+@media (max-width: 639px) {
+  .map-popup { min-width: auto; max-width: calc(100vw - 48px); padding: 14px 14px 12px; }
+  .popup-title { font-size: 14px; -webkit-line-clamp: 2; }
+  .popup-desc  { display: none; } /* hide description on mobile to keep card compact */
+  .leaflet-popup-content-wrapper { max-height: 55vh; overflow-y: auto; }
+  /* Bigger close button for thumb taps */
+  .leaflet-popup-close-button {
+    font-size: 22px !important;
+    top: 8px !important; right: 10px !important;
+    width: 36px !important; height: 36px !important;
+    display: flex !important; align-items: center !important; justify-content: center !important;
+  }
+}
 
 /* ── Zoom controls ────────────────────────────────────────────── */
 .leaflet-top.leaflet-left { top: 60px !important; }
@@ -804,6 +831,7 @@ html, body, #root {
   border: 1px solid rgba(200,195,185,0.5);
   border-radius: 20px;
   padding: 6px 14px;
+  touch-action: manipulation; /* removes 300ms tap delay on mobile */
   min-height: 36px;
   font-size: 13px; font-weight: 500; color: #A09DAE;
   cursor: pointer; font-family: inherit;
@@ -1297,6 +1325,7 @@ html, body, #root {
 [data-theme="dark"] .feed-search::placeholder { color: #343754; }
 [data-theme="dark"] .feed-search:focus { border-color: rgba(123,108,246,0.4); background: rgba(30,32,44,0.9); }
 [data-theme="dark"] .feed-empty { color: #343754; }
+[data-theme="dark"] .feed-list::after { background: linear-gradient(to bottom, transparent, rgba(10,11,16,0.97)); }
 [data-theme="dark"] .feed-city-input { background: rgba(24,27,37,0.8); border-color: rgba(42,45,62,0.8); color: #E8E6F2; }
 [data-theme="dark"] .feed-city-input::placeholder { color: #343754; }
 [data-theme="dark"] .feed-city-input:focus,
@@ -1524,15 +1553,21 @@ html, body, #root {
   /* Push zoom controls below compact header */
   .leaflet-top.leaflet-left { top: 68px !important; }
 
-  /* ── Hero card — full width, thumb-friendly ── */
+  /* ── Hero card — full width, anchored to top so it doesn't overlap the feed ── */
   .submit-hero-card {
     width: calc(100% - 32px);
     max-width: none;
-    padding: 28px 20px 24px;
+    padding: 24px 20px 20px;
     border-radius: 16px;
     gap: 14px;
-    /* Center but pushed slightly above midpoint for thumb reach */
-    margin-top: -6vh;
+    /* Push to top of screen, leaving map visible above */
+    align-self: flex-start;
+    margin-top: 16px;
+  }
+
+  .submit-hero-wrapper {
+    align-items: flex-start;
+    padding-top: 8px;
   }
 
   .submit-hero-eyebrow {
@@ -1556,9 +1591,10 @@ html, body, #root {
     border-radius: 12px;
   }
 
-  /* ── Mini pill — sits just above the bottom sheet ── */
+  /* ── Mini pill: above peek when closed, above feed when open ── */
   .submit-mini-wrapper {
-    bottom: calc(48vh + 12px);
+    /* Above peek handle when feed is collapsed */
+    bottom: calc(88px + env(safe-area-inset-bottom, 0px) + 10px);
     right: 16px;
     left: 16px;
     align-items: stretch;
@@ -1582,43 +1618,64 @@ html, body, #root {
     font-size: 20px;
   }
 
-  /* ── Activity feed — bottom sheet on mobile ── */
+  /* ── Activity feed — collapsible bottom sheet ── */
   .activity-feed {
     top: auto;
-    bottom: 0;
+    /* Push above browser chrome — env() covers safe area / home indicator */
+    bottom: env(safe-area-inset-bottom, 0px);
     left: 0;
     right: 0;
     width: 100%;
-    /* Fixed height — don't add safe-area here or it hides more map */
-    height: 48vh;
-    /* Push content above phone nav bar */
-    padding-bottom: env(safe-area-inset-bottom);
+    /* Peek: handle + title row */
+    height: 88px;
+    overflow: hidden;
     border-left: none;
     border-top: 1px solid rgba(200,195,185,0.5);
     border-radius: 18px 18px 0 0;
     transform: none !important;
-    transition: none;
+    transition: height 0.38s cubic-bezier(0.32, 0.72, 0, 1);
     padding-top: 0;
+    padding-bottom: 0;
   }
 
+  /* Default open: 55vh — map visible in top 45vh, links in bottom 55vh */
+  .map-container--sheet-open .activity-feed {
+    height: 55vh;
+    overflow: visible;
+  }
+
+  /* Mini pill sits right above the open feed — always visible */
+  .map-container--sheet-open .submit-mini-wrapper {
+    display: flex;
+    bottom: calc(55vh + env(safe-area-inset-bottom, 0px) + 10px);
+  }
+
+  /* Drag handle — bigger tap target + pointer cursor */
   .feed-header {
     padding: 10px 14px;
     border-radius: 18px 18px 0 0;
-    cursor: default;
+    cursor: pointer;
+    /* Ensure header is always on top so tap registers */
+    position: relative;
+    z-index: 1;
   }
 
   .feed-header::before {
     content: '';
     display: block;
-    width: 36px; height: 4px;
+    width: 40px; height: 4px;
     border-radius: 2px;
-    background: rgba(160,157,174,0.4);
+    background: rgba(160,157,174,0.5);
     margin: 0 auto 10px;
+    transition: background 0.2s;
   }
+  .feed-header:active::before { background: rgba(106,90,249,0.5); }
 
   .feed-list {
-    /* 64px = mini pill bar height; safe-area already on container */
-    padding: 6px 12px 64px;
+    /* bottom padding = space for safe area + comfortable thumb clearance */
+    padding: 6px 12px calc(env(safe-area-inset-bottom, 0px) + 60px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .feed-item {
@@ -1641,10 +1698,13 @@ html, body, #root {
   /* ── Disable parallax transforms on mobile ── */
   .world-sky,
   .world-particles,
-  .app-header,
-  .activity-feed {
+  .app-header {
     transform: none !important;
     transition: none;
+  }
+  /* Keep activity-feed transform disabled but allow height transition */
+  .activity-feed {
+    transform: none !important;
   }
 }
 
@@ -1652,14 +1712,40 @@ html, body, #root {
 @media (max-width: 360px) {
   .submit-hero-card { padding: 20px 14px 20px; }
   .feed-header { padding: 10px 10px; }
-  .feed-list { padding: 6px 8px 64px; }
+  .feed-list { padding: 6px 8px 80px; }
   .submit-hero-btn { font-size: 15px; padding: 13px 18px; }
+  /* Tighter peek on very small screens */
+  .activity-feed { height: 82px; }
+  .submit-mini-wrapper { bottom: calc(82px + env(safe-area-inset-bottom) + 10px); }
 }
 
 /* ── Landscape on phones ─────────────────────────────────────── */
 @media (orientation: landscape) and (max-height: 500px) {
-  .activity-feed { height: 36vh; }
+  /* Less vertical space in landscape — use 40vh for the open feed */
+  .map-container--sheet-open .activity-feed { height: 40vh; }
+  .map-container--sheet-open .submit-mini-wrapper {
+    bottom: calc(40vh + env(safe-area-inset-bottom, 0px) + 10px);
+  }
   .submit-hero-card { margin-top: 0; max-height: 80vh; overflow-y: auto; }
+}
+
+/* ── Tablets (640–1023px): sidebar layout, no bottom sheet ──── */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .activity-feed {
+    /* Restore sidebar at a narrower width on tablets */
+    width: 280px;
+    height: 100%;
+    top: 56px;
+    right: 0;
+    bottom: 0;
+    left: auto;
+    border-top: none;
+    border-left: 1px solid rgba(200,195,185,0.35);
+    border-radius: 0;
+    overflow-y: auto;
+    transform: none !important;
+    transition: none;
+  }
 }
 
 /* ── Tablet: 640–1023px ─────────────────────────────────────── */
