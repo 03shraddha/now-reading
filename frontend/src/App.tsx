@@ -96,7 +96,7 @@ export default function App() {
           onClick={toggleTheme}
           aria-label="Toggle theme"
         >
-          {theme === "dark" ? "☀︎" : "◗"}
+          {theme === "dark" ? "☀️" : "🌙"}
         </button>
       </header>
       <SubmissionBanner />

@@ -112,7 +112,7 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
           setStatus("previewing");
         }
       } catch {}
-    }, 500);
+    }, 200);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
