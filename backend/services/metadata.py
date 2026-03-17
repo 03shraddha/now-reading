@@ -6,7 +6,11 @@ import time
 import httpx
 from urllib.parse import urlparse
 
-_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; ReadingMapBot/1.0)"}
+_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+}
 
 # Private/loopback ranges — never fetch these (SSRF prevention)
 _BLOCKED_NETWORKS: list[ipaddress.IPv4Network | ipaddress.IPv6Network] = [
@@ -58,9 +62,21 @@ async def fetch_metadata(url: str) -> dict:
     if _resolves_to_private(parsed.hostname or ""):
         return fallback
 
+    async def _on_redirect(response: httpx.Response) -> None:
+        """Block redirects that point to private/internal addresses (SSRF guard)."""
+        location = response.headers.get("location", "")
+        if location:
+            redir_host = (urlparse(location).hostname or "")
+            if redir_host and _resolves_to_private(redir_host):
+                raise ValueError(f"Redirect to private address blocked: {location}")
+
     try:
-        # follow_redirects=False prevents redirect-chain SSRF bypass
-        async with httpx.AsyncClient(timeout=6.0, follow_redirects=False) as client:
+        async with httpx.AsyncClient(
+            timeout=6.0,
+            follow_redirects=True,
+            max_redirects=5,
+            event_hooks={"response": [_on_redirect]},
+        ) as client:
             resp = await client.get(url, headers=_HEADERS)
             if resp.status_code >= 400:
                 # Cache failed HTTP responses so we don't hammer unreachable URLs
