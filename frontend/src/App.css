@@ -684,19 +684,19 @@ html, body, #root {
   justify-content: space-between; gap: 10px;
 }
 .feed-card-source {
-  display: flex; align-items: center; gap: 10px; min-width: 0;
+  display: flex; align-items: center; gap: 8px; min-width: 0;
 }
 
-/* Favicon with printed-paper shadow */
+/* Favicon */
 .feed-favicon {
-  width: 24px; height: 24px; border-radius: 5px; flex-shrink: 0;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,0,0,0.05);
+  width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0;
+  opacity: 0.75;
 }
 
-/* Domain = the manga panel's focal title */
+/* Domain = secondary annotation, NOT the hero anymore */
 .feed-domain {
-  font-size: 17px; font-weight: 700; color: #1A1820;
-  letter-spacing: -0.02em;
+  font-size: 12px; font-weight: 500; color: #A09DAE;
+  letter-spacing: 0.01em;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
@@ -707,31 +707,54 @@ html, body, #root {
   color: #C0BDC8; flex-shrink: 0; letter-spacing: 0.02em;
 }
 
-/* Bottom row: location chip + count badge */
+/* Title = PRIMARY signal — the actual article name */
+.feed-title-text {
+  font-size: 15px; font-weight: 600; color: #1A1820;
+  line-height: 1.4; letter-spacing: -0.01em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Bottom row: city chips + count badge */
 .feed-card-bottom {
   display: flex; align-items: center; justify-content: space-between;
+  gap: 8px;
 }
 
-/* Location = scene annotation chip */
+/* City chips row */
+.feed-cities {
+  display: flex; align-items: center; gap: 4px;
+  flex-wrap: wrap; min-width: 0;
+}
+
+/* Location chip — smaller, less dominant than before */
 .feed-location {
-  display: inline-flex; align-items: center; gap: 4px;
-  font-size: 12px; font-weight: 400; color: #6A5AF9;
-  background: rgba(106,90,249,0.08);
-  border: 1px solid rgba(106,90,249,0.14);
-  padding: 3px 10px; border-radius: 20px;
-  letter-spacing: 0.01em;
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 11px; font-weight: 400; color: #6A5AF9;
+  background: rgba(106,90,249,0.07);
+  border: 1px solid rgba(106,90,249,0.12);
+  padding: 2px 8px; border-radius: 20px;
+  letter-spacing: 0.01em; white-space: nowrap;
 }
 
-/* Count = data indicator, warm accent */
+.feed-location--overflow {
+  color: #A09DAE;
+  background: rgba(160,157,174,0.08);
+  border-color: rgba(160,157,174,0.15);
+}
+
+/* Count = data indicator */
 .feed-badge {
-  font-size: 12px; font-weight: 700; color: #D97655;
+  font-size: 11px; font-weight: 700; color: #D97655;
   background: rgba(217,118,85,0.1);
   border: 1px solid rgba(217,118,85,0.18);
-  padding: 2px 9px; border-radius: 20px;
-  font-variant-numeric: tabular-nums;
+  padding: 2px 8px; border-radius: 20px;
+  font-variant-numeric: tabular-nums; white-space: nowrap; flex-shrink: 0;
 }
 
-/* Legacy — hidden in new card DOM */
+/* Legacy — hidden */
 .feed-info, .feed-right { display: none; }
 
 /* ── Region Panel ─────────────────────────────────────────────── */
@@ -913,7 +936,8 @@ html, body, #root {
   border-color: #3A3D52; border-left-color: #9A8CF8;
   box-shadow: 0 2px 8px rgba(123,108,246,0.2), 0 8px 24px rgba(123,108,246,0.12);
 }
-[data-theme="dark"] .feed-domain   { color: #E8E6F2; }
+[data-theme="dark"] .feed-domain      { color: #52506A; }
+[data-theme="dark"] .feed-title-text  { color: #E8E6F2; }
 [data-theme="dark"] .feed-location { color: #7B6CF6; background: rgba(123,108,246,0.1); border-color: rgba(123,108,246,0.2); }
 [data-theme="dark"] .feed-time     { color: #343754; }
 [data-theme="dark"] .feed-badge    { color: #E07B5F; background: rgba(224,123,95,0.12); border-color: rgba(224,123,95,0.2); }
