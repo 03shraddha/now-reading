@@ -288,6 +288,8 @@ html, body, #root {
 
 /* Feed toggle — mobile only, hidden on desktop */
 .feed-toggle-mobile { display: none; }
+/* Feed close btn — mobile only, hidden on desktop */
+.feed-close-btn { display: none; }
 /* Mobile backdrop — hidden outside mobile media query */
 .feed-mobile-backdrop { display: none; }
 
@@ -1627,9 +1629,9 @@ html, body, #root {
     align-items: stretch;
     /* Not repositioned when feed opens — drawer overlays map, not pushes it */
   }
-  /* Override desktop rule that moves pill above open sheet */
+  /* Hide mini pill when drawer is open — avoids overlapping feed cards */
   .map-container--sheet-open .submit-mini-wrapper {
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+    display: none;
   }
 
   .submit-mini-form {
@@ -1650,6 +1652,26 @@ html, body, #root {
     font-size: 20px;
   }
 
+  /* ── Feed close button — inside the drawer header on mobile ── */
+  .feed-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    font-size: 22px;
+    color: #A09DAE;
+    cursor: pointer;
+    padding: 2px 4px;
+    line-height: 1;
+    margin-left: 6px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .feed-close-btn:active { color: #1A1820; background: rgba(0,0,0,0.06); }
+  [data-theme="dark"] .feed-close-btn { color: #52506A; }
+
   /* ── Activity feed — right-side drawer ── */
   .activity-feed {
     /* Override sidebar positioning from non-mobile rules */
@@ -1658,15 +1680,15 @@ html, body, #root {
     right: 0;
     bottom: 0;
     left: auto;
-    width: 84vw;
-    max-width: 320px;
+    width: 82vw;    /* leaves ~18vw of map visible on the left */
+    max-width: 340px;
     height: auto;
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     border-left: 1px solid rgba(200,195,185,0.45);
     border-top: none;
-    border-radius: 16px 0 0 16px;
+    border-radius: 16px 0 0 0;
     padding-top: 0;
     padding-bottom: env(safe-area-inset-bottom, 0px);
     /* Slide out to right when closed */

@@ -127,9 +127,9 @@ export default function App() {
         <button
           className="feed-toggle-mobile"
           onClick={() => setMobileSheetOpen(!mobileSheetOpen)}
-          aria-label={mobileSheetOpen ? "Close feed" : "Open feed"}
+          aria-label="Open feed"
         >
-          {mobileSheetOpen ? "×" : "≡"}
+          ≡
         </button>
       </header>
       <SubmissionBanner />

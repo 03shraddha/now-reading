@@ -240,6 +240,12 @@ export function ActivityFeed() {
           <span className="feed-count" title="unique links in view">
             {cards.length} {cards.length === 1 ? "link" : "links"}
           </span>
+          {/* Close button lives inside the feed on mobile */}
+          <button
+            className="feed-close-btn"
+            onClick={(e) => { e.stopPropagation(); setMobileSheetOpen(false); }}
+            aria-label="Close feed"
+          >×</button>
         </div>
 
         {/* Sort tabs */}
