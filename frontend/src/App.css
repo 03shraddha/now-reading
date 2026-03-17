@@ -618,7 +618,7 @@ html, body, #root {
 }
 
 .submit-hero-eyebrow {
-  font-size: 13px; font-weight: 400; color: #A09DAE;
+  font-size: 15px; font-weight: 400; color: #A09DAE;
   letter-spacing: 0.1em; text-align: center; text-transform: uppercase;
 }
 
@@ -768,11 +768,11 @@ html, body, #root {
 }
 
 .feed-title {
-  font-size: 11px; font-weight: 700; color: #A09DAE;
+  font-size: 13px; font-weight: 700; color: #A09DAE;
   text-transform: uppercase; letter-spacing: 0.12em;
 }
 .feed-count {
-  font-size: 12px; font-weight: 700; color: #6A5AF9;
+  font-size: 13px; font-weight: 700; color: #6A5AF9;
   background: rgba(106,90,249,0.1); border: 1px solid rgba(106,90,249,0.18);
   padding: 2px 10px; border-radius: 20px; font-variant-numeric: tabular-nums;
 }
@@ -786,8 +786,8 @@ html, body, #root {
   background: none;
   border: 1px solid rgba(200,195,185,0.5);
   border-radius: 20px;
-  padding: 3px 10px;
-  font-size: 11px; font-weight: 500; color: #A09DAE;
+  padding: 4px 12px;
+  font-size: 13px; font-weight: 500; color: #A09DAE;
   cursor: pointer; font-family: inherit;
   transition: all 0.18s ease;
 }
@@ -842,12 +842,12 @@ html, body, #root {
 }
 .feed-city-input {
   width: 100%;
-  padding: 4px 22px 4px 8px;
+  padding: 5px 24px 5px 10px;
   border-radius: 99px;
   border: 1px solid #E2DFDA;
   background: transparent;
   color: #1A1820;
-  font-size: 12px;
+  font-size: 13px;
   outline: none;
   transition: border-color 0.15s;
 }
@@ -974,7 +974,7 @@ html, body, #root {
 
 /* "yours" label above the bubble */
 .bubble-yours-label {
-  font-size: 10px; font-weight: 600;
+  font-size: 12px; font-weight: 600;
   color: #6A5AF9; letter-spacing: 0.06em;
   text-transform: uppercase;
   margin-bottom: 2px; padding-left: 2px;
@@ -1028,17 +1028,17 @@ html, body, #root {
 }
 
 .bubble-domain {
-  font-size: 13px; font-weight: 500; color: #A09DAE;
+  font-size: 14px; font-weight: 500; color: #A09DAE;
   flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
 .bubble-time {
-  font-size: 10px; color: #C8C5D0;
+  font-size: 12px; color: #C8C5D0;
   font-family: ui-monospace, Consolas, monospace; flex-shrink: 0;
 }
 
 .bubble-title {
-  font-size: 15px; font-weight: 600; color: #1A1820;
+  font-size: 16px; font-weight: 600; color: #1A1820;
   line-height: 1.4; letter-spacing: -0.01em;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -1048,11 +1048,11 @@ html, body, #root {
 
 .bubble-city {
   display: flex; align-items: center; gap: 5px;
-  font-size: 11px; font-weight: 500; color: #6A5AF9;
+  font-size: 13px; font-weight: 500; color: #6A5AF9;
 }
 
 .bubble-count {
-  font-size: 10px; font-weight: 700; color: #D97655;
+  font-size: 12px; font-weight: 700; color: #D97655;
   background: rgba(217,118,85,0.1);
   border: 1px solid rgba(217,118,85,0.18);
   padding: 1px 6px; border-radius: 20px;
@@ -1071,15 +1071,15 @@ html, body, #root {
 }
 
 .bubble--overflow {
-  font-size: 11px; color: #A09DAE; font-style: italic;
+  font-size: 13px; color: #A09DAE; font-style: italic;
   background: transparent; border-color: transparent;
 }
 
 .bubble-reply-city {
-  font-size: 11px; font-weight: 500; color: #8880C8;
+  font-size: 13px; font-weight: 500; color: #8880C8;
 }
 
-.bubble-count--reply { font-size: 10px; }
+.bubble-count--reply { font-size: 12px; }
 
 /* Dark mode bubbles */
 [data-theme="dark"] .bubble--main {
@@ -1329,7 +1329,7 @@ html, body, #root {
    ══════════════════════════════════════════════════════════════ */
 .app-title {
   font-family: "Bangers", "Komika Axis", cursive;
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 400; /* Bangers is always bold by design */
   letter-spacing: 0.06em;
   color: #1A1820;
@@ -1341,7 +1341,7 @@ html, body, #root {
 .app-tagline {
   font-family: "Inter", sans-serif;
   font-style: normal;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 400;
   color: #9896AA;
   letter-spacing: 0.01em;
