@@ -523,6 +523,9 @@ html, body, #root {
 
 /* ── Popup content ────────────────────────────────────────────── */
 .map-popup { padding: 20px 20px 18px; min-width: 260px; max-width: 340px; font-family: inherit; }
+@media (max-width: 639px) {
+  .map-popup { min-width: auto; max-width: calc(100vw - 40px); }
+}
 .popup-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .popup-favicon { width: 22px; height: 22px; border-radius: 4px; flex-shrink: 0; }
 .popup-domain  { font-size: 13px; color: #A09DAE; font-weight: 400; }
@@ -786,10 +789,12 @@ html, body, #root {
   background: none;
   border: 1px solid rgba(200,195,185,0.5);
   border-radius: 20px;
-  padding: 4px 12px;
+  padding: 6px 14px;
+  min-height: 36px;
   font-size: 13px; font-weight: 500; color: #A09DAE;
   cursor: pointer; font-family: inherit;
   transition: all 0.18s ease;
+  display: flex; align-items: center;
 }
 .feed-sort-tab:hover { color: #6A5AF9; border-color: rgba(106,90,249,0.3); }
 .feed-sort-tab--active {
@@ -842,12 +847,13 @@ html, body, #root {
 }
 .feed-city-input {
   width: 100%;
-  padding: 5px 24px 5px 10px;
+  padding: 8px 28px 8px 12px;
+  min-height: 36px;
   border-radius: 99px;
   border: 1px solid #E2DFDA;
   background: transparent;
   color: #1A1820;
-  font-size: 13px;
+  font-size: 14px;
   outline: none;
   transition: border-color 0.15s;
 }
@@ -1476,6 +1482,7 @@ html, body, #root {
   .app-header {
     height: 56px;
     padding: 0 16px;
+    padding-top: env(safe-area-inset-top);
     gap: 10px;
   }
 
@@ -1491,8 +1498,13 @@ html, body, #root {
   }
 
   .theme-toggle {
-    padding: 4px 8px;
-    font-size: 16px;
+    padding: 8px 10px;
+    font-size: 18px;
+    min-width: 40px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   /* Push zoom controls below compact header */
@@ -1530,9 +1542,9 @@ html, body, #root {
     border-radius: 12px;
   }
 
-  /* ── Mini pill — wider, bottom-center ── */
+  /* ── Mini pill — sits just above the bottom sheet ── */
   .submit-mini-wrapper {
-    bottom: 16px;
+    bottom: calc(48vh + 12px);
     right: 16px;
     left: 16px;
     align-items: stretch;
@@ -1563,21 +1575,21 @@ html, body, #root {
     left: 0;
     right: 0;
     width: 100%;
-    height: calc(52vh + env(safe-area-inset-bottom));
+    /* Fixed height — don't add safe-area here or it hides more map */
+    height: 48vh;
+    /* Push content above phone nav bar */
+    padding-bottom: env(safe-area-inset-bottom);
     border-left: none;
     border-top: 1px solid rgba(200,195,185,0.5);
     border-radius: 18px 18px 0 0;
-    /* Parallax disabled on mobile (no cursor) */
     transform: none !important;
     transition: none;
-    /* Always-visible drag handle affordance */
     padding-top: 0;
   }
 
   .feed-header {
-    padding: 12px 18px;
+    padding: 10px 14px;
     border-radius: 18px 18px 0 0;
-    /* Visual drag handle */
     cursor: default;
   }
 
@@ -1587,20 +1599,25 @@ html, body, #root {
     width: 36px; height: 4px;
     border-radius: 2px;
     background: rgba(160,157,174,0.4);
-    margin: 0 auto 12px;
+    margin: 0 auto 10px;
   }
 
   .feed-list {
-    padding: 8px 12px calc(80px + env(safe-area-inset-bottom)); /* bottom padding + phone nav bar */
+    /* 64px = mini pill bar height; safe-area already on container */
+    padding: 6px 12px 64px;
   }
 
   .feed-item {
-    padding: 12px 14px 10px;
+    padding: 10px 12px;
   }
 
   .feed-domain {
-    font-size: 15px;
+    font-size: 14px;
   }
+
+  /* Increase tiny font sizes to 14px minimum on mobile */
+  .popup-domain, .feed-sort-tab, .bubble-time, .bubble-count,
+  .feed-city-input, .popup-city, .popup-count { font-size: 14px; }
 
   /* ── Disable parallax transforms on mobile ── */
   .world-sky,
@@ -1610,6 +1627,20 @@ html, body, #root {
     transform: none !important;
     transition: none;
   }
+}
+
+/* ── Small phones: ≤360px ───────────────────────────────────── */
+@media (max-width: 360px) {
+  .submit-hero-card { padding: 20px 14px 20px; }
+  .feed-header { padding: 10px 10px; }
+  .feed-list { padding: 6px 8px 64px; }
+  .submit-hero-btn { font-size: 15px; padding: 13px 18px; }
+}
+
+/* ── Landscape on phones ─────────────────────────────────────── */
+@media (orientation: landscape) and (max-height: 500px) {
+  .activity-feed { height: 36vh; }
+  .submit-hero-card { margin-top: 0; max-height: 80vh; overflow-y: auto; }
 }
 
 /* ── Tablet: 640–1023px ─────────────────────────────────────── */
