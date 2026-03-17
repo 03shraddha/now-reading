@@ -187,7 +187,7 @@ export function ActivityFeed() {
           <input
             id="feed-city-input"
             className={`feed-city-input${cityQuery ? " feed-city-input--active" : ""}`}
-            placeholder="search by city…"
+            placeholder="search by city :)…"
             value={cityQuery}
             onChange={(e) => setCityQuery(e.target.value)}
             spellCheck={false}
