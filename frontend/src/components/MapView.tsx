@@ -30,13 +30,16 @@ function dotColor(count: number): "cool" | "warm" | "hot" {
   return "cool";
 }
 
-// Special icon for the user's own drop — glowing indigo dot (no label, popup handles that)
+// Special icon for the user's own drop — label pill + glowing indigo dot
 function makeUserPinIcon() {
   return L.divIcon({
     className: "",
-    html: `<div class="reading-dot reading-dot--user"></div>`,
-    iconSize:   [20, 20],
-    iconAnchor: [10, 10],
+    html: `<div class="user-pin-wrapper">
+      <div class="user-pin-label">your drop</div>
+      <div class="reading-dot reading-dot--user"></div>
+    </div>`,
+    iconSize:   [72, 52],
+    iconAnchor: [36, 44],
   });
 }
 
@@ -360,11 +363,20 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
           }, 950);
         }
       } else {
-        existing.setIcon(makeDotIcon(sub.count, false));
+        // Don't override the user pin icon on count updates
+        if (id !== userPinIdRef.current) {
+          existing.setIcon(makeDotIcon(sub.count, false));
+        }
         existing.off("click");
         existing.on("click", async () => {
-          const html = await buildRichPopup(sub);
-          existing.bindPopup(html).openPopup();
+          if (id === userPinIdRef.current) {
+            existing.bindPopup(buildUserDropPopupHtml(sub), {
+              className: "user-drop-leaflet-popup", closeButton: true, offset: [0, -14],
+            }).openPopup();
+          } else {
+            const html = await buildRichPopup(sub);
+            existing.bindPopup(html).openPopup();
+          }
         });
       }
     }
