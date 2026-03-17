@@ -1322,17 +1322,16 @@ html, body, #root {
 [data-theme="dark"] .app-title { color: #E8E6F2; }
 
 .app-tagline {
-  font-family: "Playfair Display", Georgia, serif;
-  font-style: italic;
-  font-size: 13px;
-  font-weight: 400;
+  font-family: "Inter", sans-serif;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 300;
   color: #9896AA;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
   line-height: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  /* hide on narrow viewports */
   flex: 1;
 }
 [data-theme="dark"] .app-tagline { color: #52506A; }
