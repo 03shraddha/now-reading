@@ -76,11 +76,3 @@ npm install
 npm run dev
 ```
 
-### Environment variables (backend `.env`)
-
-```
-FIREBASE_CREDENTIALS=path/to/serviceAccount.json  # or inline JSON
-SUBMIT_TOKEN_SECRET=your-secret-here
-CORS_ORIGINS=http://localhost:5173
-ENFORCE_TOKEN=false   # set true in production
-```
