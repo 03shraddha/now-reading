@@ -29,8 +29,19 @@ interface Props {
 // ── Identity persistence ──────────────────────────────────────────────────
 const IDENTITY_KEY = "globalmap_identity";
 function loadIdentity(): { displayName: string; twitterHandle: string } {
-  try { return { displayName: "", twitterHandle: "", ...JSON.parse(localStorage.getItem(IDENTITY_KEY) || "{}") }; }
-  catch { return { displayName: "", twitterHandle: "" }; }
+  try {
+    const raw = localStorage.getItem(IDENTITY_KEY);
+    if (!raw) return { displayName: "", twitterHandle: "" };
+    const parsed = JSON.parse(raw);
+    // Handle both the new object format and any legacy string format
+    if (typeof parsed === "object" && parsed !== null) {
+      return {
+        displayName:    typeof parsed.displayName    === "string" ? parsed.displayName    : "",
+        twitterHandle:  typeof parsed.twitterHandle  === "string" ? parsed.twitterHandle  : "",
+      };
+    }
+    return { displayName: "", twitterHandle: "" };
+  } catch { return { displayName: "", twitterHandle: "" }; }
 }
 function saveIdentity(displayName: string, twitterHandle: string) {
   localStorage.setItem(IDENTITY_KEY, JSON.stringify({ displayName, twitterHandle }));
@@ -50,20 +61,24 @@ function useSubmitToken() {
   const tokenRef    = useRef<string | null>(null);
   const expiresRef  = useRef<number>(0);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (attempt = 0) => {
     try {
       const res = await fetch(apiUrl("/api/token"));
       if (res.ok) {
         const data = await res.json();
         tokenRef.current  = data.token;
-        expiresRef.current = Date.now() + (data.expires_in - 10) * 1000; // 10s early refresh
+        expiresRef.current = Date.now() + (data.expires_in - 10) * 1000;
+        return;
       }
     } catch {}
+    // Retry up to 3 times with backoff (handles transient failures on page load)
+    if (attempt < 3) {
+      setTimeout(() => refresh(attempt + 1), 1000 * (attempt + 1));
+    }
   }, []);
 
   useEffect(() => {
     refresh();
-    // Re-fetch slightly before the token window closes
     const id = setInterval(() => {
       if (Date.now() >= expiresRef.current) refresh();
     }, 30_000);
@@ -133,10 +148,7 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
     };
   }, [url]); // intentionally omit status to avoid re-running on status changes
 
-  // Persist identity to localStorage whenever it changes
-  useEffect(() => {
-    saveIdentity(displayName, twitterHandle);
-  }, [displayName, twitterHandle]);
+  useEffect(() => { saveIdentity(displayName, twitterHandle); }, [displayName, twitterHandle]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -159,6 +171,20 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
     setStatus("loading");
     setErrorMsg("");
 
+    // Request browser geolocation with a short timeout so it doesn't block submit.
+    // If the user denies or it times out, coords stay null and the server falls back to IP.
+    let coords: { lat: number; lng: number } | null = null;
+    if ("geolocation" in navigator) {
+      coords = await new Promise((resolve) => {
+        const timer = setTimeout(() => resolve(null), 4000);
+        navigator.geolocation.getCurrentPosition(
+          (pos) => { clearTimeout(timer); resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
+          ()    => { clearTimeout(timer); resolve(null); },
+          { timeout: 4000, maximumAge: 5 * 60 * 1000 },
+        );
+      });
+    }
+
     try {
       // If token is missing, try fetching it now (server may have been cold)
       if (!tokenRef.current) {
@@ -180,9 +206,10 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
           ...(tokenRef.current ? { "X-Submit-Token": tokenRef.current } : {}),
         },
         body: JSON.stringify({
-          url: trimmed,
-          display_name:   displayName.trim()   || null,
+          url:            trimmed,
+          display_name:   displayName.trim() || null,
           twitter_handle: twitterHandle.trim().replace(/^@/, "") || null,
+          ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
         }),
       });
 
@@ -208,14 +235,38 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
         setTimeout(() => useSubmissionsStore.getState().setUserPinId(null), 10 * 60 * 1000);
       }
 
-      // Set submission banner — prefer API response fields (backend now stores title/favicon),
-      // then fall back to prefetched metadata, then to generic fallbacks
       const bannerDomain = data.domain ?? metadata?.domain ?? new URL(trimmed).hostname.replace("www.", "");
+      const resolvedTitle = data.title ?? metadata?.title ?? bannerDomain;
+      const resolvedFavicon = data.favicon_url ?? metadata?.favicon_url ?? `https://www.google.com/s2/favicons?domain=${bannerDomain}&sz=32`;
+
+      // Optimistically upsert into the submissions store so ActivityFeed shows the
+      // correct title immediately, without waiting for the Firestore listener to deliver
+      // the new doc + a secondary /api/metadata fetch.
+      if (data.id) {
+        useSubmissionsStore.getState().upsertSubmission({
+          id:             data.id,
+          url:            trimmed,
+          domain:         bannerDomain,
+          title:          resolvedTitle !== bannerDomain ? resolvedTitle : null,
+          favicon_url:    resolvedFavicon,
+          city:           data.city ?? "",
+          country:        data.country ?? "",
+          country_code:   data.country_code ?? "",
+          lat:            data.lat,
+          lng:            data.lng,
+          count:          data.count ?? 1,
+          updated_at:     new Date(),
+          display_name:   displayName.trim() || null,
+          twitter_handle: twitterHandle.trim().replace(/^@/, "") || null,
+        });
+      }
+
+      // Set submission banner
       useSubmissionsStore.getState().setSubmissionBanner({
-        favicon_url: data.favicon_url ?? metadata?.favicon_url ?? `https://www.google.com/s2/favicons?domain=${bannerDomain}&sz=32`,
-        title: data.title ?? metadata?.title ?? bannerDomain,
-        domain: bannerDomain,
-        city: data.city ?? "",
+        favicon_url: resolvedFavicon,
+        title:       resolvedTitle,
+        domain:      bannerDomain,
+        city:        data.city ?? "",
       });
       // Track submitted URL for sidebar filter (10 min)
       useSubmissionsStore.getState().setUserSubmittedUrl(trimmed);
@@ -281,7 +332,7 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
           <input
             type="text"
             className="submit-identity-input"
-            placeholder="your name (optional)"
+            placeholder="name (optional)"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             maxLength={50}
@@ -341,7 +392,7 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
             <input
               type="text"
               className="submit-identity-input"
-              placeholder="your name (optional)"
+              placeholder="name (optional)"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               maxLength={50}

@@ -29,6 +29,55 @@ def _add_jitter(lat: float, lng: float) -> tuple[float, float]:
     )
 
 
+async def reverse_geocode(lat: float, lng: float) -> dict:
+    """
+    Reverse-geocode GPS coordinates to city-level location using Nominatim.
+    Used when the client provides browser geolocation instead of relying on IP.
+    Falls back to the nearest Indian city on failure.
+    """
+    cache_key = f"coords:{round(lat, 2)},{round(lng, 2)}"
+    cached = _GEO_CACHE.get(cache_key)
+    if cached and time.time() < cached[1]:
+        return cached[0]
+
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(
+                "https://nominatim.openstreetmap.org/reverse",
+                params={"lat": lat, "lon": lng, "format": "json", "zoom": 10},
+                headers={"User-Agent": "GlobalReadingMap/1.0"},
+            )
+            data = resp.json()
+
+        addr = data.get("address", {})
+        city = (
+            addr.get("city")
+            or addr.get("town")
+            or addr.get("village")
+            or addr.get("county")
+            or "Unknown"
+        )
+        country      = addr.get("country", "Unknown")
+        country_code = addr.get("country_code", "").upper()
+
+        jlat, jlng = _add_jitter(lat, lng)
+        result = {
+            "city":         city,
+            "country":      country,
+            "country_code": country_code,
+            "lat":          jlat,
+            "lng":          jlng,
+        }
+        _GEO_CACHE[cache_key] = (result, time.time() + _GEO_TTL)
+        return result
+    except Exception:
+        pass
+
+    location = random.choice(_INDIA_FALLBACK_CITIES).copy()
+    location["lat"], location["lng"] = _add_jitter(location["lat"], location["lng"])
+    return location
+
+
 async def lookup(ip: str) -> dict:
     """
     Resolve an IP address to approximate city-level location.

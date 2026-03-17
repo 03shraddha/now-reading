@@ -63,6 +63,7 @@ def get_token():
 
 
 @app.get("/health")
+@app.head("/health")
 def health():
     return {"status": "ok"}
 

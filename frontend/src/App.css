@@ -487,21 +487,24 @@ html, body, #root {
 
 /* Each cluster emits ambient light via filter: drop-shadow */
 .cluster-cool {
-  background: rgba(59,187,200, 0.18);
-  border: 1.5px solid rgba(59,187,200, 0.5);
-  color: #3BBBC8;
+  background: rgba(59,187,200, 0.82);
+  border: 1.5px solid rgba(59,187,200, 0.95);
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.25);
   animation: bloom-cool 4s ease-in-out infinite;
 }
 .cluster-warm {
-  background: rgba(217,118,85, 0.18);
-  border: 1.5px solid rgba(217,118,85, 0.5);
-  color: #D97655;
+  background: rgba(217,118,85, 0.82);
+  border: 1.5px solid rgba(217,118,85, 0.95);
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.25);
   animation: bloom-warm 3.6s ease-in-out infinite;
 }
 .cluster-hot {
-  background: rgba(212,79,106, 0.18);
-  border: 1.5px solid rgba(212,79,106, 0.55);
-  color: #D44F6A;
+  background: rgba(212,79,106, 0.82);
+  border: 1.5px solid rgba(212,79,106, 0.95);
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.25);
   animation: bloom-hot 3s ease-in-out infinite;
 }
 
@@ -786,22 +789,29 @@ html, body, #root {
 .submit-mini-btn:active:not(:disabled) { transform: scale(0.93); }
 .submit-mini-btn:disabled { opacity: 0.28; cursor: not-allowed; }
 
-/* Identity fields (name + twitter) — shown below URL in both hero and mini */
+/* Identity fields (name + twitter) — compact two-field row */
 .submit-identity-row {
-  display: flex; gap: 8px; width: 100%;
-  margin-top: 8px;
+  display: flex; gap: 6px; width: 100%;
+  margin-top: 6px;
 }
 .submit-identity-input {
   flex: 1; min-width: 0;
   background: rgba(106,90,249,0.05); border: 1px solid rgba(106,90,249,0.15); border-radius: 8px; outline: none;
-  font-size: 13px; font-weight: 400; color: #1A1820; font-family: inherit;
-  padding: 7px 10px; transition: border-color 0.2s;
+  font-size: 12px; font-weight: 400; color: #1A1820; font-family: inherit;
+  padding: 5px 9px; transition: border-color 0.2s;
 }
 .submit-identity-input::placeholder { color: #B0ADBC; }
 .submit-identity-input:focus { border-color: #6A5AF9; background: rgba(106,90,249,0.08); }
 [data-theme="dark"] .submit-identity-input { color: #E8E6F2; border-bottom-color: rgba(123,108,246,0.25); }
 [data-theme="dark"] .submit-identity-input::placeholder { color: #52506A; }
 [data-theme="dark"] .submit-identity-input:focus { border-bottom-color: #7B6CF6; }
+
+/* On mobile, shrink identity fields so URL input stays prominent */
+@media (max-width: 600px) {
+  .submit-identity-row { margin-top: 4px; gap: 4px; }
+  .submit-identity-input { font-size: 10px; padding: 3px 7px; border-radius: 6px; }
+  .submit-identity-input::placeholder { font-size: 10px; }
+}
 
 /* Mobile prompt — hidden on desktop */
 .submit-mini-prompt { display: none; }
@@ -1149,9 +1159,15 @@ html, body, #root {
 }
 
 .bubble-attribution {
-  font-size: 0.78rem; font-weight: 400;
-  color: #6A5AF9; opacity: 0.7;
+  display: block;
+  font-size: 11px; font-weight: 400;
+  color: #6A5AF9; opacity: 0.6;
   text-decoration: none;
+  margin-top: 1px; width: 100%;
+}
+/* Inside reply bubbles, attribution sits on its own wrapped line */
+.bubble--reply .bubble-attribution {
+  font-size: 10px; margin-top: 0;
 }
 .bubble-attribution:hover { opacity: 1; text-decoration: underline; }
 .bubble-attribution--name { cursor: default; }
@@ -1167,7 +1183,7 @@ html, body, #root {
 
 /* Reply bubbles — smaller, indented, "me too" */
 .bubble--reply {
-  display: flex; align-items: center; gap: 6px;
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   background: rgba(106,90,249,0.06);
   border: 1px solid rgba(106,90,249,0.1);
   border-radius: 12px 12px 12px 4px;
@@ -1321,9 +1337,9 @@ html, body, #root {
 [data-theme="dark"] .reading-dot--cool { background: #5AC8D8; }
 [data-theme="dark"] .reading-dot--warm { background: #E07B5F; }
 [data-theme="dark"] .reading-dot--hot  { background: #E0546A; }
-[data-theme="dark"] .cluster-cool { background: rgba(90,200,216,0.18); border-color: rgba(90,200,216,0.5); color: #5AC8D8; }
-[data-theme="dark"] .cluster-warm { background: rgba(224,123,95,0.18); border-color: rgba(224,123,95,0.5); color: #E07B5F; }
-[data-theme="dark"] .cluster-hot  { background: rgba(224,84,106,0.18); border-color: rgba(224,84,106,0.55); color: #E0546A; }
+[data-theme="dark"] .cluster-cool { background: rgba(90,200,216,0.82); border-color: rgba(90,200,216,0.95); color: #fff; }
+[data-theme="dark"] .cluster-warm { background: rgba(224,123,95,0.82); border-color: rgba(224,123,95,0.95); color: #fff; }
+[data-theme="dark"] .cluster-hot  { background: rgba(224,84,106,0.82); border-color: rgba(224,84,106,0.95); color: #fff; }
 
 /* Popup */
 [data-theme="dark"] .leaflet-popup-content-wrapper {
