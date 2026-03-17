@@ -10,6 +10,7 @@ from google.cloud.firestore_v1 import SERVER_TIMESTAMP, Increment
 
 from firebase_client import get_db
 from services import geoip, url_utils, moderation
+from services.metadata import fetch_metadata
 
 router = APIRouter()
 
@@ -194,6 +195,9 @@ async def submit(
     # 4. GeoIP lookup (async, with localhost fallback)
     location = await geoip.lookup(client_ip)
 
+    # 4b. Fetch article metadata (title, favicon) — stored once at write time
+    meta = await fetch_metadata(normalized)
+
     # 5. Write to Firestore (deduplicated by URL + city composite key)
     db = get_db()
     doc_id = _make_doc_id(normalized, location["country_code"], location["city"])
@@ -211,6 +215,8 @@ async def submit(
         doc_ref.set({
             "url": normalized,
             "domain": domain,
+            "title": meta.get("title", domain),
+            "favicon_url": meta.get("favicon_url", f"https://www.google.com/s2/favicons?domain={domain}&sz=32"),
             "city": location["city"],
             "country": location["country"],
             "country_code": location["country_code"],
@@ -226,5 +232,7 @@ async def submit(
         "lng": location["lng"],
         "city": location["city"],
         "domain": domain,
+        "title": meta.get("title", domain),
+        "favicon_url": meta.get("favicon_url", f"https://www.google.com/s2/favicons?domain={domain}&sz=32"),
         "count": count,
     }
