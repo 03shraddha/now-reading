@@ -131,6 +131,9 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop }: Props) {
         });
       }
 
+      // Notify ActivityFeed which URL belongs to this user
+      window.dispatchEvent(new CustomEvent("user-submitted", { detail: trimmed }));
+
       onFirstSubmit();
       setTimeout(() => setStatus("idle"), 3000);
     } catch (err: any) {

@@ -599,11 +599,15 @@ html, body, #root {
 }
 
 .feed-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 18px 22px 16px;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 14px 14px 12px;
   border-bottom: 1px solid rgba(200,195,185,0.4);
   flex-shrink: 0;
   background: rgba(252,251,249,0.9);
+}
+
+.feed-header-top {
+  display: flex; align-items: center; justify-content: space-between;
 }
 
 .feed-title {
@@ -611,9 +615,67 @@ html, body, #root {
   text-transform: uppercase; letter-spacing: 0.12em;
 }
 .feed-count {
-  font-size: 13px; font-weight: 700; color: #6A5AF9;
+  font-size: 12px; font-weight: 700; color: #6A5AF9;
   background: rgba(106,90,249,0.1); border: 1px solid rgba(106,90,249,0.18);
-  padding: 3px 13px; border-radius: 20px; font-variant-numeric: tabular-nums;
+  padding: 2px 10px; border-radius: 20px; font-variant-numeric: tabular-nums;
+}
+
+/* Sort tabs */
+.feed-sort-tabs {
+  display: flex; gap: 4px;
+}
+
+.feed-sort-tab {
+  background: none;
+  border: 1px solid rgba(200,195,185,0.5);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 11px; font-weight: 500; color: #A09DAE;
+  cursor: pointer; font-family: inherit;
+  transition: all 0.18s ease;
+}
+.feed-sort-tab:hover { color: #6A5AF9; border-color: rgba(106,90,249,0.3); }
+.feed-sort-tab--active {
+  background: rgba(106,90,249,0.1);
+  border-color: rgba(106,90,249,0.25);
+  color: #6A5AF9;
+  font-weight: 600;
+}
+
+/* Search */
+.feed-search-wrap {
+  position: relative;
+  display: flex; align-items: center;
+}
+
+.feed-search {
+  width: 100%;
+  background: rgba(255,255,255,0.6);
+  border: 1px solid rgba(200,195,185,0.6);
+  border-radius: 8px;
+  padding: 6px 28px 6px 10px;
+  font-size: 12px; color: #1A1820;
+  outline: none; font-family: inherit;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+.feed-search::placeholder { color: #C0BDC8; }
+.feed-search:focus {
+  border-color: rgba(106,90,249,0.4);
+  background: rgba(255,255,255,0.9);
+}
+
+.feed-search-clear {
+  position: absolute; right: 8px;
+  background: none; border: none;
+  font-size: 16px; color: #C0BDC8;
+  cursor: pointer; line-height: 1; padding: 0;
+  transition: color 0.15s;
+}
+.feed-search-clear:hover { color: #6A5AF9; }
+
+.feed-empty {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: #C0BDC8; padding: 32px 16px; text-align: center;
 }
 
 .feed-list {
@@ -629,6 +691,11 @@ html, body, #root {
    Main bubble = lead city. Replies = other cities reading same link.
    ══════════════════════════════════════════════════════════════ */
 
+@keyframes bubble-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 .bubble-thread {
   display: flex;
   flex-direction: column;
@@ -639,9 +706,36 @@ html, body, #root {
   color: inherit;
   cursor: pointer;
   transition: background 0.2s ease;
+  animation: bubble-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .bubble-thread:hover  { background: rgba(106,90,249,0.03); }
 .bubble-thread:active { background: rgba(106,90,249,0.06); }
+
+/* "yours" label above the bubble */
+.bubble-yours-label {
+  font-size: 10px; font-weight: 600;
+  color: #6A5AF9; letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 2px; padding-left: 2px;
+}
+
+/* User's own submission — outgoing bubble style (right-aligned, indigo) */
+.bubble-thread--mine { align-items: flex-end; }
+.bubble--mine {
+  background: #6A5AF9 !important;
+  border-color: #5A48E8 !important;
+  border-radius: 18px 18px 4px 18px !important; /* pointed bottom-right */
+  align-self: flex-end;
+}
+.bubble--mine .bubble-domain { color: rgba(255,255,255,0.65) !important; }
+.bubble--mine .bubble-time   { color: rgba(255,255,255,0.5) !important; }
+.bubble--mine .bubble-title  { color: #fff !important; }
+.bubble--mine .bubble-city   { color: rgba(255,255,255,0.8) !important; }
+.bubble--mine .bubble-count  {
+  background: rgba(255,255,255,0.2) !important;
+  border-color: rgba(255,255,255,0.3) !important;
+  color: #fff !important;
+}
 
 /* Main bubble — incoming iMessage style */
 .bubble--main {
@@ -910,6 +1004,14 @@ html, body, #root {
 /* Scene cards — dark mode */
 [data-theme="dark"] .activity-feed { background: rgba(10,11,16,0.88); border-left-color: rgba(42,45,62,0.6); }
 [data-theme="dark"] .feed-header   { background: rgba(14,15,22,0.92); border-bottom-color: rgba(42,45,62,0.5); }
+[data-theme="dark"] .feed-sort-tab { color: #52506A; border-color: rgba(42,45,62,0.8); }
+[data-theme="dark"] .feed-sort-tab:hover { color: #7B6CF6; border-color: rgba(123,108,246,0.3); }
+[data-theme="dark"] .feed-sort-tab--active { background: rgba(123,108,246,0.12); border-color: rgba(123,108,246,0.25); color: #7B6CF6; }
+[data-theme="dark"] .feed-search { background: rgba(24,27,37,0.8); border-color: rgba(42,45,62,0.8); color: #E8E6F2; }
+[data-theme="dark"] .feed-search::placeholder { color: #343754; }
+[data-theme="dark"] .feed-search:focus { border-color: rgba(123,108,246,0.4); background: rgba(30,32,44,0.9); }
+[data-theme="dark"] .feed-empty { color: #343754; }
+[data-theme="dark"] .bubble-yours-label { color: #7B6CF6; }
 [data-theme="dark"] .feed-title    { color: #52506A; }
 [data-theme="dark"] .feed-count    { color: #7B6CF6; background: rgba(123,108,246,0.14); border-color: rgba(123,108,246,0.2); }
 
