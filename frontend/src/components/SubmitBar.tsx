@@ -336,28 +336,6 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
             {status === "loading" ? "…" : status === "success" ? "✓" : "share"}
           </button>
         </form>
-        <div className="submit-identity-row">
-          <input
-            type="text"
-            className="submit-identity-input"
-            placeholder="name (optional)"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            maxLength={50}
-            autoComplete="off"
-            spellCheck={false}
-          />
-          <input
-            type="text"
-            className="submit-identity-input"
-            placeholder="@twitter (optional)"
-            value={twitterHandle}
-            onChange={(e) => setTwitterHandle(e.target.value.replace(/^@+/, ""))}
-            maxLength={16}
-            autoComplete="off"
-            spellCheck={false}
-          />
-        </div>
         {status === "error" && <div className="submit-mini-error">{errorMsg}</div>}
       </div>
     );
