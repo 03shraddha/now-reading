@@ -4,7 +4,6 @@ import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import "leaflet.markercluster";
-import "leaflet.heat";
 import { useSubmissions } from "../hooks/useSubmissions";
 import { useSubmissionsStore } from "../store/submissionsStore";
 import type { Submission } from "../types";
@@ -142,7 +141,6 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
   const containerRef     = useRef<HTMLDivElement>(null);
   const clusterGroupRef  = useRef<any | null>(null);
   const markersRef       = useRef<Map<string, L.Marker>>(new Map());
-  const heatLayerRef     = useRef<L.Layer | null>(null);
   const tileLayerRef     = useRef<L.TileLayer | null>(null);
   const submissions      = useSubmissionsStore((s) => s.submissions);
   const submissionsRef   = useRef(submissions);
@@ -249,36 +247,9 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
     mapRef.current     = map;
     clusterGroupRef.current = clusterGroup;
 
-    // ── Heat layer helpers ────────────────────────────────────
-    function heatPoints(): Array<[number, number, number]> {
-      return Array.from(submissionsRef.current.values()).map((s) => [
-        s.lat, s.lng, Math.min(s.count / 20, 1),
-      ]);
-    }
-
-    function updateLayerVisibility(zoom: number) {
-      if (zoom < 5) {
-        if (map.hasLayer(clusterGroup)) map.removeLayer(clusterGroup);
-        if (heatLayerRef.current) {
-          try { (heatLayerRef.current as any).setLatLngs(heatPoints()); } catch {}
-        } else {
-          heatLayerRef.current = (L as any).heatLayer(heatPoints(), {
-            radius: 28, blur: 22, max: 1.0,
-            gradient: {
-              0.0: "rgba(90,200,216,0)",
-              0.3: "#5AC8D8",
-              0.65: "#E07B5F",
-              1.0: "#E0546A",
-            },
-          });
-          heatLayerRef.current!.addTo(map);
-        }
-      } else {
-        if (heatLayerRef.current && map.hasLayer(heatLayerRef.current)) {
-          map.removeLayer(heatLayerRef.current);
-        }
-        if (!map.hasLayer(clusterGroup)) map.addLayer(clusterGroup);
-      }
+    // Always show the cluster group — dots/clusters visible at every zoom level
+    function updateLayerVisibility(_zoom: number) {
+      if (!map.hasLayer(clusterGroup)) map.addLayer(clusterGroup);
     }
 
     updateLayerVisibility(DEFAULT_ZOOM);
@@ -312,8 +283,7 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
 
     return () => {
       map.remove();
-      mapRef.current     = null;
-      heatLayerRef.current = null;
+      mapRef.current = null;
     };
   }, []);
 
@@ -382,12 +352,6 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
       }
     }
 
-    if (heatLayerRef.current && mapRef.current?.hasLayer(heatLayerRef.current)) {
-      const pts: Array<[number, number, number]> = Array.from(submissions.values()).map((s) => [
-        s.lat, s.lng, Math.min(s.count / 20, 1),
-      ]);
-      try { (heatLayerRef.current as any).setLatLngs(pts); } catch {}
-    }
   }, [submissions]);
 
   // ── Highlight markers when hoveredUrl changes ─────────────────
