@@ -358,15 +358,15 @@ html, body, #root {
 /* Soft halo = visual cue that location is IP-approximate, not exact */
 .reading-dot--cool {
   background: #3BBBC8;
-  box-shadow: 0 0 0 3px rgba(59,187,200,0.12), 0 0 10px rgba(59,187,200,0.18);
+  box-shadow: 0 0 0 5px rgba(59,187,200,0.4), 0 0 20px rgba(59,187,200,0.6);
 }
 .reading-dot--warm {
   background: #D97655;
-  box-shadow: 0 0 0 3px rgba(217,118,85,0.12), 0 0 10px rgba(217,118,85,0.18);
+  box-shadow: 0 0 0 5px rgba(217,118,85,0.4), 0 0 20px rgba(217,118,85,0.6);
 }
 .reading-dot--hot  {
   background: #D44F6A;
-  box-shadow: 0 0 0 3px rgba(212,79,106,0.14), 0 0 12px rgba(212,79,106,0.22);
+  box-shadow: 0 0 0 6px rgba(212,79,106,0.45), 0 0 26px rgba(212,79,106,0.7);
   animation: marker-bloom-pulse 3.2s ease-in-out infinite;
 }
 
@@ -509,16 +509,16 @@ html, body, #root {
 }
 
 @keyframes bloom-cool {
-  0%, 100% { filter: drop-shadow(0 0 4px rgba(59,187,200, 0.3)); transform: scale(1); }
-  50%       { filter: drop-shadow(0 0 14px rgba(59,187,200, 0.6)); transform: scale(1.04); }
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(59,187,200, 0.7)); transform: scale(1); }
+  50%       { filter: drop-shadow(0 0 22px rgba(59,187,200, 1.0)); transform: scale(1.06); }
 }
 @keyframes bloom-warm {
-  0%, 100% { filter: drop-shadow(0 0 4px rgba(217,118,85, 0.3)); transform: scale(1); }
-  50%       { filter: drop-shadow(0 0 16px rgba(217,118,85, 0.65)); transform: scale(1.05); }
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(217,118,85, 0.7)); transform: scale(1); }
+  50%       { filter: drop-shadow(0 0 24px rgba(217,118,85, 1.0)); transform: scale(1.07); }
 }
 @keyframes bloom-hot {
-  0%, 100% { filter: drop-shadow(0 0 6px rgba(212,79,106, 0.4)); transform: scale(1); }
-  50%       { filter: drop-shadow(0 0 20px rgba(212,79,106, 0.8)); transform: scale(1.08); }
+  0%, 100% { filter: drop-shadow(0 0 10px rgba(212,79,106, 0.75)); transform: scale(1); }
+  50%       { filter: drop-shadow(0 0 30px rgba(212,79,106, 1.0)); transform: scale(1.1); }
 }
 
 /* ── Leaflet popup ────────────────────────────────────────────── */
