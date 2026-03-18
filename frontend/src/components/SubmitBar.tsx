@@ -47,6 +47,14 @@ function saveIdentity(displayName: string, twitterHandle: string) {
   localStorage.setItem(IDENTITY_KEY, JSON.stringify({ displayName, twitterHandle }));
 }
 
+// Prepend https:// if the user typed a bare domain/path (e.g. "medium.com/article")
+function normalizeUrl(raw: string): string {
+  const t = raw.trim();
+  if (!t) return t;
+  if (/^https?:\/\//i.test(t)) return t;
+  return `https://${t}`;
+}
+
 // Returns true when the response is HTML — Render's cold-start wake-up page
 async function isColdStart(res: Response): Promise<boolean> {
   const ct = res.headers.get("content-type") ?? "";
@@ -115,7 +123,7 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    const trimmed = url.trim();
+    const trimmed = normalizeUrl(url);
     if (!trimmed) {
       setMetadata(null);
       if (status === "previewing") setStatus("idle");
@@ -152,7 +160,7 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const trimmed = url.trim();
+    const trimmed = normalizeUrl(url);
     if (!trimmed) return;
 
     try {
