@@ -748,7 +748,7 @@ html, body, #root {
 
 /* ── Mini pill — floating glyph control ───────────────────────── */
 .submit-mini-wrapper {
-  position: absolute; bottom: 22px; right: 22px;
+  position: absolute; bottom: 22px; right: calc(360px + 22px);
   z-index: 900; display: flex; flex-direction: column;
   align-items: flex-end; gap: 6px;
 }
