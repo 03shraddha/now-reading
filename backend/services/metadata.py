@@ -121,11 +121,13 @@ async def fetch_metadata(url: str) -> dict:
         _extract_og_title(html)
         or _first_match(html, r'<title[^>]*>([^<]+)</title>')
     )
+    if scraped_title:
+        scraped_title = _clean_scraped_title(scraped_title)
     # Discard bot-challenge/error page titles that aren't real article titles
     _JUNK_TITLES = {"just a moment", "access denied", "403 forbidden", "404 not found",
                     "please wait", "checking your browser", "attention required"}
     if scraped_title:
-        t_lower = scraped_title.strip().lower()
+        t_lower = scraped_title.lower()
         if t_lower in _JUNK_TITLES or any(w in t_lower for w in _PAYWALL_WORDS):
             scraped_title = None  # prefer slug over paywall/login page title
     title = scraped_title or slug_title or domain
@@ -173,6 +175,23 @@ _PAYWALL_WORDS = {
     "premium", "members only", "members-only",
     "unlock", "get access", "paywall",
 }
+
+
+def _clean_scraped_title(title: str) -> str:
+    """
+    Strip common noise from scraped <title> and og:title values:
+    - URL fragments (https://, http://)
+    - Site-name suffixes separated by |, ·, —, or —
+    - Trailing/leading whitespace
+    """
+    # Cut off at the first occurrence of a URL scheme
+    for scheme in ("https://", "http://", "https:", "http:"):
+        idx = title.find(scheme)
+        if idx > 0:
+            title = title[:idx]
+    # Strip common site-name separators (| · — –) keeping only the first part
+    title = re.split(r'\s*[|·—–]\s*', title, maxsplit=1)[0]
+    return title.strip()
 
 
 def _title_from_url(url: str) -> str | None:
