@@ -57,6 +57,19 @@ def validate_url(url: str) -> tuple[bool, str]:
     if host in ("localhost", "127.0.0.1", "::1"):
         return False, "Local URLs are not allowed"
 
+    # Reject percent-encoded characters in the hostname (e.g. "project%20hail%20mary")
+    if "%" in host:
+        return False, "Invalid URL — the domain contains encoded characters"
+
+    # Reject hostnames without a dot — these are bare words, not real domains
+    try:
+        ipaddress.ip_address(host)
+        # It's a valid IP — fall through to private-range check below
+    except ValueError:
+        # It's a domain name — must contain at least one dot
+        if "." not in host:
+            return False, "Invalid URL — not a valid domain"
+
     # Block submissions pointing at private IP ranges
     try:
         addr = ipaddress.ip_address(host)

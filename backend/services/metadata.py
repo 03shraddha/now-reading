@@ -74,6 +74,24 @@ def _extract_og_description(html: str) -> str | None:
     return None
 
 
+_YOUTUBE_DOMAINS = {"youtube.com", "youtu.be", "m.youtube.com", "music.youtube.com"}
+
+
+async def _fetch_youtube_title(url: str, client: httpx.AsyncClient) -> str | None:
+    """Use YouTube's public oEmbed API to get the video title. No auth required."""
+    try:
+        resp = await client.get(
+            f"https://www.youtube.com/oembed?url={url}&format=json",
+            headers={"Accept": "application/json"},
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            return data.get("title") or None
+    except Exception:
+        pass
+    return None
+
+
 async def fetch_metadata(url: str) -> dict:
     """Scrape og:title, og:description, and favicon for a URL. Never raises."""
     # Return cached result if still fresh
@@ -100,6 +118,8 @@ async def fetch_metadata(url: str) -> dict:
             if redir_host and _resolves_to_private(redir_host):
                 raise ValueError(f"Redirect to private address blocked: {location}")
 
+    is_youtube = domain.replace("www.", "") in _YOUTUBE_DOMAINS
+
     try:
         async with httpx.AsyncClient(
             timeout=6.0,
@@ -107,6 +127,21 @@ async def fetch_metadata(url: str) -> dict:
             max_redirects=5,
             event_hooks={"response": [_on_redirect]},
         ) as client:
+            # YouTube: use oEmbed API for a reliable title (avoids bot-detection)
+            if is_youtube:
+                yt_title = await _fetch_youtube_title(url, client)
+                if yt_title:
+                    result = {
+                        "title": yt_title.strip()[:120],
+                        "description": None,
+                        "domain": domain,
+                        "favicon_url": favicon_url,
+                    }
+                    if len(_META_CACHE) > 1000:
+                        _META_CACHE.clear()
+                    _META_CACHE[url] = (result, time.time() + _META_TTL)
+                    return result
+
             resp = await client.get(url, headers=_HEADERS)
             if resp.status_code >= 400:
                 # Cache failed HTTP responses so we don't hammer unreachable URLs
@@ -166,6 +201,8 @@ _ARXIV_ID_RE = re.compile(r'^\d{4}\.\d{4,5}$')
 _JUNK_TITLES = {
     "just a moment", "access denied", "403 forbidden", "404 not found",
     "please wait", "checking your browser", "attention required",
+    "document moved", "moved permanently", "moved temporarily",
+    "object moved", "page not found",
 }
 
 # Matches titles that are a short prefix + long numeric ID: "P 187790585", "ID 4567890"
@@ -240,7 +277,9 @@ def _title_from_url(url: str) -> str | None:
          -> "My Great Article"
     Returns None if no meaningful slug is found.
     """
-    path = urlparse(url).path.rstrip("/")
+    parsed_url = urlparse(url)
+    parsed_domain = (parsed_url.netloc or "").lower().replace("www.", "")
+    path = parsed_url.path.rstrip("/")
     segments = [s for s in path.split("/") if s]
 
     for seg in reversed(segments):
@@ -251,6 +290,13 @@ def _title_from_url(url: str) -> str | None:
         if re.match(r'^\d+$', seg):    # pure numeric ID → skip
             continue
         if _ALL_HEX_RE.match(seg):     # UUID / pure hex ID → skip
+            continue
+        # URL shortener code: starts with digit, contains letters, no word separators
+        # e.g. amzn.in/02Z0LfZd — not a readable slug
+        if re.match(r'^\d[A-Za-z0-9]*$', seg) and re.search(r'[A-Za-z]', seg) and '-' not in seg and '_' not in seg:
+            continue
+        # YouTube video ID: 11-char base64url (e.g. youtu.be/dQw4w9WgXcQ) — not a readable slug
+        if parsed_domain in _YOUTUBE_DOMAINS and re.match(r'^[A-Za-z0-9_-]{11}$', seg):
             continue
 
         # Strip file extension before further checks (e.g. "2301.00001.pdf" → "2301.00001")

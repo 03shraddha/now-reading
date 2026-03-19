@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from firebase_client import get_db
-from services.metadata import fetch_metadata, _title_from_url, _clean_scraped_title
+from services.metadata import fetch_metadata, _title_from_url, _clean_scraped_title, _is_junk_scraped_title
 
 
 def _is_corrupted(title: str, domain: str) -> bool:
@@ -41,6 +41,7 @@ async def backfill():
     print(f"Found {len(docs)} documents.\n")
 
     corrupted   = []
+    junk        = []
     missing     = []
     good        = 0
 
@@ -52,11 +53,15 @@ async def backfill():
             corrupted.append(doc)
         elif not title or title == domain:
             missing.append(doc)
+        elif _is_junk_scraped_title(title, domain):
+            # Stored title is junk (e.g. "Document moved", shortcodes)
+            junk.append(doc)
         else:
             good += 1
 
     print(f"  Good titles:      {good}")
     print(f"  Corrupted titles: {len(corrupted)}")
+    print(f"  Junk titles:      {len(junk)}")
     print(f"  Missing titles:   {len(missing)}")
     print()
 
@@ -100,9 +105,37 @@ async def backfill():
             print(f"  SKIP   {domain:30s}  (no better title found)")
             unchanged += 1
 
-    # ── Pass 2: fill in missing titles ────────────────────────────
+    # ── Pass 2: fix junk titles (e.g. "Document moved", shortcodes) ──
+    if junk:
+        print(f"\n--- Pass 2: fixing {len(junk)} junk titles ---")
+    for doc in junk:
+        data   = doc.to_dict()
+        url    = data.get("url", "")
+        domain = data.get("domain", "")
+        old    = data.get("title", "")
+
+        # Prefer slug (instant, no HTTP) first
+        slug = _title_from_url(url)
+        if slug and slug != domain and not _is_junk_scraped_title(slug, domain):
+            doc.reference.update({"title": slug})
+            print(f"  SLUG   {domain:30s}  {old[:40]!r}  →  {slug[:60]!r}")
+            fixed_slug += 1
+            continue
+
+        # Fall back to live scrape
+        meta = await fetch_metadata(url)
+        scraped = meta.get("title", "")
+        if scraped and scraped != domain and not _is_junk_scraped_title(scraped, domain):
+            doc.reference.update({"title": scraped})
+            print(f"  SCRAPE {domain:30s}  {old[:40]!r}  →  {scraped[:60]!r}")
+            fixed_scrape += 1
+        else:
+            print(f"  SKIP   {domain:30s}  {old[:40]!r}  (no better title found)")
+            unchanged += 1
+
+    # ── Pass 3: fill in missing titles ────────────────────────────
     if missing:
-        print(f"\n--- Pass 2: filling {len(missing)} missing titles ---")
+        print(f"\n--- Pass 3: filling {len(missing)} missing titles ---")
     for doc in missing:
         data   = doc.to_dict()
         url    = data.get("url", "")
