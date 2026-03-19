@@ -231,7 +231,7 @@ export function ActivityFeed() {
   // ── Theme filter ───────────────────────────────────────────
   const themeFiltered = useMemo(() => {
     if (themeFilter === "all") return allCards;
-    return allCards.filter((c) => classifyTheme(c.domain, c.title) === themeFilter);
+    return allCards.filter((c) => classifyTheme(c.domain, c.title ?? null) === themeFilter);
   }, [allCards, themeFilter]);
 
   // ── Sort ──────────────────────────────────────────────────
