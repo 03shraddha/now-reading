@@ -1002,11 +1002,9 @@ html, body, #root {
 /* Theme filter pills */
 .feed-theme-tabs {
   display: flex; gap: 4px;
-  flex-wrap: nowrap; overflow-x: auto;
-  scrollbar-width: none; -webkit-overflow-scrolling: touch;
-  padding-bottom: 1px; margin-top: 4px;
+  flex-wrap: wrap;
+  margin-top: 4px;
 }
-.feed-theme-tabs::-webkit-scrollbar { display: none; }
 
 .feed-theme-tab {
   background: none;
@@ -1927,7 +1925,6 @@ html, body, #root {
   /* Sort tabs */
   .feed-sort-tabs { gap: 4px; margin-top: 2px; }
   .feed-sort-tab { font-size: 11px; padding: 4px 10px; }
-  .feed-theme-tabs { gap: 4px; margin-top: 3px; }
   .feed-theme-tab { font-size: 11px; padding: 3px 9px; }
 
   /* City filter input */
