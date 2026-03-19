@@ -11,6 +11,7 @@ from starlette.requests import Request
 
 from routes.submit import router as submit_router
 from routes.metadata import router as metadata_router
+from routes.react import router as react_router
 
 load_dotenv()
 
@@ -37,6 +38,7 @@ app.add_middleware(NoIndexMiddleware)
 
 app.include_router(submit_router, prefix="/api")
 app.include_router(metadata_router, prefix="/api")
+app.include_router(react_router, prefix="/api")
 
 # ── HMAC submit token ──────────────────────────────────────────────────────
 # Shared secret used to sign short-lived tokens that the frontend must present

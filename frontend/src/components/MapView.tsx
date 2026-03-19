@@ -5,6 +5,7 @@ import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import "leaflet.markercluster";
 import { useSubmissions } from "../hooks/useSubmissions";
+import { useReactions }   from "../hooks/useReactions";
 import { useSubmissionsStore } from "../store/submissionsStore";
 import type { Submission } from "../types";
 
@@ -144,6 +145,7 @@ interface MapViewProps {
 export const MapView = forwardRef<MapViewHandle, MapViewProps>(
 function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
   useSubmissions();
+  useReactions();
 
   const mapRef           = useRef<L.Map | null>(null);
   const containerRef     = useRef<HTMLDivElement>(null);

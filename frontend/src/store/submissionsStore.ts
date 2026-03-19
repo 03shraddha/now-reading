@@ -21,6 +21,11 @@ interface SubmissionsState {
   viewedLinks:      Set<string>;
   autoFollow:       boolean;
 
+  // Reactions: url → count (real-time from Firestore link_reactions collection)
+  reactions:        Map<string, number>;
+  // URLs the current user has reacted to (persisted in localStorage)
+  reactedUrls:      Set<string>;
+
   upsertSubmission:  (s: Submission) => void;
   removeSubmission:  (id: string) => void;
   setFocusLocation: (loc: [number, number] | null) => void;
@@ -32,6 +37,8 @@ interface SubmissionsState {
   markViewed:       (url: string) => void;
   setAutoFollow:    (on: boolean) => void;
   pruneOld:         () => void;
+  upsertReaction:   (url: string, count: number) => void;
+  setReactedUrls:   (s: Set<string>) => void;
 
   submissionBanner: SubmissionBanner | null;
   setSubmissionBanner: (b: SubmissionBanner | null) => void;
@@ -39,6 +46,15 @@ interface SubmissionsState {
   setUserSubmittedUrl: (url: string | null) => void;
   mobileSheetOpen: boolean;
   setMobileSheetOpen: (v: boolean) => void;
+}
+
+// Load user's previously reacted URLs from localStorage
+function _loadReactedUrls(): Set<string> {
+  try {
+    const raw = localStorage.getItem("reactedUrls");
+    if (raw) return new Set(JSON.parse(raw) as string[]);
+  } catch { /* ignore */ }
+  return new Set();
 }
 
 export const useSubmissionsStore = create<SubmissionsState>((set) => ({
@@ -51,6 +67,8 @@ export const useSubmissionsStore = create<SubmissionsState>((set) => ({
   userPinId:     null,
   viewedLinks:   new Set(),
   autoFollow:    false,
+  reactions:     new Map(),
+  reactedUrls:   _loadReactedUrls(),
   submissionBanner: null,
   userSubmittedUrl: null,
   mobileSheetOpen: true,  // default open so links are visible on first load
@@ -88,6 +106,15 @@ export const useSubmissionsStore = create<SubmissionsState>((set) => ({
     }),
 
   setAutoFollow: (on) => set({ autoFollow: on }),
+
+  upsertReaction: (url, count) =>
+    set((state) => {
+      const next = new Map(state.reactions);
+      next.set(url, Math.max(0, count));
+      return { reactions: next };
+    }),
+
+  setReactedUrls: (s) => set({ reactedUrls: s }),
 
   setSubmissionBanner: (b) => set({ submissionBanner: b }),
   setUserSubmittedUrl: (url) => set({ userSubmittedUrl: url }),

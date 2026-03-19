@@ -8,6 +8,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // link_reactions: anyone can read, backend writes via Admin SDK
+    match /link_reactions/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // rate_limits and used_nonces: backend-only (Admin SDK bypasses rules)
     match /rate_limits/{docId} {
       allow read, write: if false;

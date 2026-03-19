@@ -22,6 +22,8 @@ export interface PageMetadata {
   favicon_url: string;
 }
 
+export type Theme = "tech" | "science" | "economics" | "philosophy" | "art";
+
 export interface MapBounds {
   north: number;
   south: number;

@@ -998,6 +998,50 @@ html, body, #root {
 
 .feed-sort-tab--filtered { color: #D97655; border-color: rgba(217,118,85,0.3); }
 .feed-sort-tab--filtered.feed-sort-tab--active { background: rgba(217,118,85,0.1); color: #D97655; }
+
+/* Theme filter pills */
+.feed-theme-tabs {
+  display: flex; gap: 4px;
+  flex-wrap: nowrap; overflow-x: auto;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  padding-bottom: 1px; margin-top: 4px;
+}
+.feed-theme-tabs::-webkit-scrollbar { display: none; }
+
+.feed-theme-tab {
+  background: none;
+  border: 1px solid rgba(200,195,185,0.4);
+  border-radius: 20px;
+  padding: 4px 11px;
+  font-size: 12px; font-weight: 500; color: #9A97B0;
+  cursor: pointer; font-family: inherit;
+  transition: all 0.18s ease;
+  white-space: nowrap; flex-shrink: 0;
+}
+.feed-theme-tab:hover { color: #6A5AF9; border-color: rgba(106,90,249,0.3); }
+.feed-theme-tab--active {
+  background: rgba(106,90,249,0.08);
+  border-color: rgba(106,90,249,0.3);
+  color: #6A5AF9;
+  font-weight: 600;
+}
+
+/* Heart button on feed cards */
+.bubble-heart {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: none; border: none;
+  font-size: 14px; color: #B8B5CC;
+  cursor: pointer; padding: 2px 4px;
+  border-radius: 8px;
+  transition: color 0.15s ease, transform 0.12s ease;
+  margin-top: 4px; margin-left: auto;
+  line-height: 1;
+}
+.bubble-heart:hover { color: #E97777; transform: scale(1.15); }
+.bubble-heart--active { color: #E04F4F; }
+.bubble-heart--active:hover { color: #C43939; transform: scale(1.1); }
+.bubble-heart-count { font-size: 11px; font-weight: 600; }
+
 .feed-city-pill--active {
   background: rgba(106,90,249,0.1);
   border-color: rgba(106,90,249,0.25);
@@ -1421,6 +1465,12 @@ html, body, #root {
 [data-theme="dark"] .feed-sort-tab { color: #52506A; border-color: rgba(42,45,62,0.8); }
 [data-theme="dark"] .feed-sort-tab:hover { color: #7B6CF6; border-color: rgba(123,108,246,0.3); }
 [data-theme="dark"] .feed-sort-tab--active { background: rgba(123,108,246,0.12); border-color: rgba(123,108,246,0.25); color: #7B6CF6; }
+[data-theme="dark"] .feed-theme-tab { color: #42405A; border-color: rgba(42,45,62,0.8); }
+[data-theme="dark"] .feed-theme-tab:hover { color: #7B6CF6; border-color: rgba(123,108,246,0.3); }
+[data-theme="dark"] .feed-theme-tab--active { background: rgba(123,108,246,0.12); border-color: rgba(123,108,246,0.25); color: #7B6CF6; }
+[data-theme="dark"] .bubble-heart { color: #42405A; }
+[data-theme="dark"] .bubble-heart:hover { color: #E97777; }
+[data-theme="dark"] .bubble-heart--active { color: #E04F4F; }
 [data-theme="dark"] .feed-search { background: rgba(24,27,37,0.8); border-color: rgba(42,45,62,0.8); color: #E8E6F2; }
 [data-theme="dark"] .feed-search::placeholder { color: #343754; }
 [data-theme="dark"] .feed-search:focus { border-color: rgba(123,108,246,0.4); background: rgba(30,32,44,0.9); }
@@ -1877,6 +1927,8 @@ html, body, #root {
   /* Sort tabs */
   .feed-sort-tabs { gap: 4px; margin-top: 2px; }
   .feed-sort-tab { font-size: 11px; padding: 4px 10px; }
+  .feed-theme-tabs { gap: 4px; margin-top: 3px; }
+  .feed-theme-tab { font-size: 11px; padding: 3px 9px; }
 
   /* City filter input */
   .feed-city-input-wrap { margin-top: 6px; }

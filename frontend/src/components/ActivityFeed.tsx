@@ -1,6 +1,8 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useSubmissionsStore } from "../store/submissionsStore";
 import { apiUrl } from "../lib/api";
+import { classifyTheme } from "../lib/themes";
+import type { Theme } from "../types";
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -23,7 +25,8 @@ function fmtCount(n: number): string {
   return String(n);
 }
 
-type SortMode = "recent" | "a-z" | "z-a";
+type SortMode = "recent" | "reactions";
+type ThemeFilter = "all" | Theme;
 
 interface FeedCard {
   url:         string;
@@ -60,10 +63,16 @@ export function ActivityFeed() {
   const setHoveredUrl    = useSubmissionsStore((s) => s.setHoveredUrl);
   useSubmissionsStore((s) => s.userPinId); // subscribed for future highlight feature
 
-  const [titles, setTitles]       = useState<Record<string, string>>({});
-  const [sort, setSort]           = useState<SortMode>("recent");
-  const [cityQuery, setCityQuery] = useState("");
-  const fetchedUrls               = useRef<Set<string>>(new Set());
+  const reactions      = useSubmissionsStore((s) => s.reactions);
+  const reactedUrls    = useSubmissionsStore((s) => s.reactedUrls);
+  const setReactedUrls = useSubmissionsStore((s) => s.setReactedUrls);
+
+  const [titles, setTitles]             = useState<Record<string, string>>({});
+  const [sort, setSort]                 = useState<SortMode>("recent");
+  const [themeFilter, setThemeFilter]   = useState<ThemeFilter>("all");
+  const [cityQuery, setCityQuery]       = useState("");
+  const [reactingUrl, setReactingUrl]   = useState<string | null>(null); // tracks in-flight request
+  const fetchedUrls                     = useRef<Set<string>>(new Set());
 
   // ── Drag-to-resize bottom sheet ──────────────────────────────
   const PEEK_H   = 88;   // px — handle + title only
@@ -214,14 +223,19 @@ export function ActivityFeed() {
     if (allCards.length < 2 && sort !== "recent") setSort("recent");
   }, [allCards.length, sort]);
 
+  // ── Theme filter ───────────────────────────────────────────
+  const themeFiltered = useMemo(() => {
+    if (themeFilter === "all") return allCards;
+    return allCards.filter((c) => classifyTheme(c.domain, c.title) === themeFilter);
+  }, [allCards, themeFilter]);
+
   // ── Sort ──────────────────────────────────────────────────
   const sorted = useMemo(() => {
-    return [...allCards].sort((a, b) => {
-      if (sort === "a-z") return  a.domain.localeCompare(b.domain);
-      if (sort === "z-a") return  b.domain.localeCompare(a.domain);
+    return [...themeFiltered].sort((a, b) => {
+      if (sort === "reactions") return (reactions.get(b.url) ?? 0) - (reactions.get(a.url) ?? 0);
       return b.latestAt.getTime() - a.latestAt.getTime();
     });
-  }, [allCards, sort]);
+  }, [themeFiltered, sort, reactions]);
 
   // ── Final cards: city filter, user's own card pinned to top ──
   const cards = useMemo(() => {
@@ -256,6 +270,39 @@ export function ActivityFeed() {
     }
   }, [cards]);
 
+  // ── Heart reaction handler ────────────────────────────────
+  async function handleReact(e: React.MouseEvent, url: string) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (reactingUrl === url) return; // debounce in-flight
+
+    const already = reactedUrls.has(url);
+    const action  = already ? "remove" : "add";
+
+    // Optimistic update
+    const newSet = new Set(reactedUrls);
+    if (already) newSet.delete(url); else newSet.add(url);
+    setReactedUrls(newSet);
+    try {
+      localStorage.setItem("reactedUrls", JSON.stringify([...newSet]));
+    } catch { /* storage may be unavailable */ }
+
+    setReactingUrl(url);
+    try {
+      const tokenRes = await fetch(apiUrl("/api/token")).then((r) => r.json());
+      await fetch(apiUrl("/api/react"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Submit-Token": tokenRes.token },
+        body: JSON.stringify({ url, action }),
+      });
+    } catch {
+      // On failure, roll back optimistic update
+      setReactedUrls(reactedUrls);
+    } finally {
+      setReactingUrl(null);
+    }
+  }
+
   // Never hide the feed entirely — always render the shell so the bottom sheet is accessible
   if (submissions.size === 0) return null;
 
@@ -280,7 +327,7 @@ export function ActivityFeed() {
         onTouchEnd={onHandleTouchEnd}
         onClick={(e) => {
           const t = e.target as HTMLElement;
-          if (t.closest(".feed-sort-tabs, .feed-city-input-wrap")) return;
+          if (t.closest(".feed-sort-tabs, .feed-theme-tabs, .feed-city-input-wrap")) return;
           setMobileSheetOpen(!mobileSheetOpen);
         }}
       >
@@ -301,13 +348,35 @@ export function ActivityFeed() {
 
         {/* Sort tabs */}
         <div className="feed-sort-tabs">
-          {(["recent", "a-z", "z-a"] as SortMode[]).map((mode) => (
+          {(["recent", "reactions"] as SortMode[]).map((mode) => (
             <button
               key={mode}
               className={`feed-sort-tab${sort === mode ? " feed-sort-tab--active" : ""}`}
               onClick={() => setSort(mode)}
             >
-              {mode}
+              {mode === "reactions" ? "♡ top" : mode}
+            </button>
+          ))}
+        </div>
+
+        {/* Theme filter pills */}
+        <div className="feed-theme-tabs">
+          {(
+            [
+              { label: "all",        val: "all"         },
+              { label: "tech",       val: "tech"        },
+              { label: "science",    val: "science"     },
+              { label: "econ",       val: "economics"   },
+              { label: "philosophy", val: "philosophy"  },
+              { label: "art",        val: "art"         },
+            ] as { label: string; val: ThemeFilter }[]
+          ).map(({ label, val }) => (
+            <button
+              key={val}
+              className={`feed-theme-tab${themeFilter === val ? " feed-theme-tab--active" : ""}`}
+              onClick={() => setThemeFilter(val)}
+            >
+              {label}
             </button>
           ))}
         </div>
@@ -327,7 +396,9 @@ export function ActivityFeed() {
       </div>
 
       {cards.length === 0 ? (
-        <div className="feed-empty">nothing here yet — pan the map</div>
+        <div className="feed-empty">
+          {themeFilter !== "all" ? `no ${themeFilter} links in view` : "nothing here yet — pan the map"}
+        </div>
       ) : (
         <div className="feed-list">
           {cards.map((card, i) => {
@@ -371,6 +442,16 @@ export function ActivityFeed() {
                     {lead.count > 1 && <span className="bubble-count">{fmtCount(lead.count)}</span>}
                   </div>
                   <Attribution twitter_handle={lead.twitter_handle} display_name={lead.display_name} />
+                  <button
+                    className={`bubble-heart${reactedUrls.has(card.url) ? " bubble-heart--active" : ""}`}
+                    onClick={(e) => handleReact(e, card.url)}
+                    aria-label={reactedUrls.has(card.url) ? "Unlike" : "Like"}
+                  >
+                    {reactedUrls.has(card.url) ? "♥" : "♡"}
+                    {(reactions.get(card.url) ?? 0) > 0 && (
+                      <span className="bubble-heart-count">{fmtCount(reactions.get(card.url)!)}</span>
+                    )}
+                  </button>
                 </div>
 
                 {thread.slice(0, 3).map((c, j) => (
