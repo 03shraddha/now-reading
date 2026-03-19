@@ -34,6 +34,7 @@ interface SubmissionsState {
   setHighlightedId: (id: string | null) => void;
   setHoveredUrl:    (url: string | null) => void;
   setUserPinId:     (id: string | null) => void;
+  clearMyPin:       () => void;
   markViewed:       (url: string) => void;
   setAutoFollow:    (on: boolean) => void;
   pruneOld:         () => void;
@@ -57,6 +58,20 @@ function _loadReactedUrls(): Set<string> {
   return new Set();
 }
 
+// Persist the user's own submitted pin across sessions
+const MY_PIN_KEY = "myPin";
+function _loadMyPin(): { url: string | null; id: string | null } {
+  try {
+    const raw = localStorage.getItem(MY_PIN_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* ignore */ }
+  return { url: null, id: null };
+}
+function _saveMyPin(url: string | null, id: string | null) {
+  if (url && id) localStorage.setItem(MY_PIN_KEY, JSON.stringify({ url, id }));
+  else localStorage.removeItem(MY_PIN_KEY);
+}
+
 export const useSubmissionsStore = create<SubmissionsState>((set) => ({
   submissions:   new Map(),
   focusLocation: null,
@@ -64,13 +79,13 @@ export const useSubmissionsStore = create<SubmissionsState>((set) => ({
   mapZoom:       2,
   highlightedId: null,
   hoveredUrl:    null,
-  userPinId:     null,
+  userPinId:     _loadMyPin().id,
   viewedLinks:   new Set(),
   autoFollow:    false,
   reactions:     new Map(),
   reactedUrls:   _loadReactedUrls(),
   submissionBanner: null,
-  userSubmittedUrl: null,
+  userSubmittedUrl: _loadMyPin().url,
   mobileSheetOpen: true,  // default open so links are visible on first load
 
   upsertSubmission: (s) =>
@@ -96,7 +111,10 @@ export const useSubmissionsStore = create<SubmissionsState>((set) => ({
 
   setHoveredUrl: (url) => set({ hoveredUrl: url }),
 
-  setUserPinId: (id) => set({ userPinId: id }),
+  setUserPinId: (id) => {
+    set((state) => { _saveMyPin(state.userSubmittedUrl, id); return { userPinId: id }; });
+  },
+  clearMyPin: () => { _saveMyPin(null, null); set({ userPinId: null, userSubmittedUrl: null }); },
 
   markViewed: (url) =>
     set((state) => {
@@ -117,7 +135,9 @@ export const useSubmissionsStore = create<SubmissionsState>((set) => ({
   setReactedUrls: (s) => set({ reactedUrls: s }),
 
   setSubmissionBanner: (b) => set({ submissionBanner: b }),
-  setUserSubmittedUrl: (url) => set({ userSubmittedUrl: url }),
+  setUserSubmittedUrl: (url) => {
+    set((state) => { _saveMyPin(url, state.userPinId); return { userSubmittedUrl: url }; });
+  },
   setMobileSheetOpen: (v) => set({ mobileSheetOpen: v }),
 
   pruneOld: () => {}, // submissions are kept permanently

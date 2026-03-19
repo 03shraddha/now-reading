@@ -138,7 +138,7 @@ function useSubmitToken() {
 
 export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Props) {
   const [url, setUrl] = useState("");
-  const [status, setStatus] = useState<"idle" | "previewing" | "loading" | "success" | "error" | "waking">("idle");
+  const [status, setStatus] = useState<"idle" | "previewing" | "loading" | "success" | "error" | "waking" | "not-url">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [_submitCount, setSubmitCount] = useState(1);
   const [displayName,   setDisplayName]   = useState(() => loadIdentity().displayName);
@@ -184,10 +184,17 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
+    // If input has spaces it's plain text, not a URL
+    if (url.includes(" ")) {
+      setMetadata(null);
+      setStatus("not-url");
+      return;
+    }
+
     const trimmed = normalizeUrl(url);
     if (!trimmed) {
       setMetadata(null);
-      if (status === "previewing") setStatus("idle");
+      if (status === "previewing" || status === "not-url") setStatus("idle");
       return;
     }
 
@@ -298,10 +305,9 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
       setUrl("");
       setMetadata(null);
 
-      // Mark this submission as the user's own pin (clears after 10 min)
+      // Mark this submission as the user's own pin (persisted in localStorage)
       if (data.id) {
         useSubmissionsStore.getState().setUserPinId(data.id);
-        setTimeout(() => useSubmissionsStore.getState().setUserPinId(null), 10 * 60 * 1000);
       }
 
       const bannerDomain = data.domain ?? metadata?.domain ?? new URL(trimmed).hostname.replace("www.", "");
@@ -337,9 +343,8 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
         domain:      bannerDomain,
         city:        data.city ?? "",
       });
-      // Track submitted URL for sidebar filter (10 min)
+      // Track submitted URL for sidebar filter (persisted in localStorage)
       useSubmissionsStore.getState().setUserSubmittedUrl(trimmed);
-      setTimeout(() => useSubmissionsStore.getState().setUserSubmittedUrl(null), 10 * 60 * 1000);
 
       // Fire pin drop animation — get button center as screen-space origin
       if (onPinDrop && data.lat != null && data.lng != null) {
@@ -382,7 +387,7 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
             value={url}
             onChange={(e) => {
               setUrl(e.target.value);
-              if (status === "error") setStatus("idle");
+              if (status === "error" || status === "not-url") setStatus("idle");
             }}
             disabled={status === "loading"}
             autoComplete="off"
@@ -397,7 +402,8 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
             {status === "loading" ? "…" : status === "success" ? "✓" : "share"}
           </button>
         </form>
-        {status === "error" && <div className="submit-mini-error">{errorMsg}</div>}
+        {status === "error"   && <div className="submit-mini-error">{errorMsg}</div>}
+        {status === "not-url" && <div className="submit-mini-error">please paste a link, not plain text</div>}
         {coReaders.length > 0 && (
           <div className="mini-co-readers">
             join {coReaders.length} {coReaders.length === 1 ? "other" : "others"} →
@@ -492,7 +498,8 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
           </div>
         )}
 
-        {status === "error" && <div className="submit-hero-error">{errorMsg}</div>}
+        {status === "error"   && <div className="submit-hero-error">{errorMsg}</div>}
+        {status === "not-url" && <div className="submit-hero-error">please paste a link (e.g. nytimes.com/...) not plain text</div>}
         {status === "waking" && (
           <div className="submit-hero-error">
             server is waking up — please try again in ~30 seconds

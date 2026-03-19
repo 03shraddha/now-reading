@@ -22,13 +22,24 @@ function timeAgo(date: Date): string {
 }
 
 // Extract a readable title from the URL slug — instant, no network needed.
+// Clean a stored title: strip file extensions, trailing numeric IDs, decode %20, etc.
+function sanitizeTitle(t: string | null): string | null {
+  if (!t) return null;
+  let s = t.trim();
+  try { s = decodeURIComponent(s); } catch { /* leave as-is */ }
+  s = s.replace(/\.(html?|php|aspx?|jsp)$/i, "").trim(); // strip file extensions
+  s = s.replace(/\s+\d{6,}$/, "").trim();                // strip trailing long numeric IDs
+  if (s.length < 4 || /^\d+$/.test(s)) return null;
+  return s;
+}
+
 // e.g. "https://x.substack.com/p/why-stoicism-matters" → "Why Stoicism Matters"
 function titleFromUrl(url: string): string | null {
   try {
     const { pathname } = new URL(url);
     const parts = pathname.split("/").filter(Boolean);
-    const slug  = parts[parts.length - 1] ?? "";
-    const clean = slug.replace(/\.[a-z]{2,5}$/, ""); // strip extensions
+    const raw   = decodeURIComponent(parts[parts.length - 1] ?? "");
+    const clean = raw.replace(/\.[a-z]{2,5}$/, ""); // strip extensions
     if (clean.length < 5) return null;
     // Skip generic path segments
     if (/^(index|home|about|page|post|article|p|s|item|entry|read|view)$/i.test(clean)) return null;
@@ -172,6 +183,8 @@ export function ActivityFeed() {
   }
 
   const userSubmittedUrl = useSubmissionsStore((s) => s.userSubmittedUrl);
+  const userPinId        = useSubmissionsStore((s) => s.userPinId);
+  const clearMyPin       = useSubmissionsStore((s) => s.clearMyPin);
   const myUrl = userSubmittedUrl;
 
   // ── Viewport filter — only apply when zoomed in; always fall back to global ───
@@ -287,6 +300,25 @@ export function ActivityFeed() {
         .catch(() => {});
     }
   }, [allCards]);
+
+  // ── Delete handler ────────────────────────────────────────
+  async function handleDelete(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!userPinId) return;
+    try {
+      const tokenRes = await fetch(apiUrl("/api/token"));
+      const { token } = await tokenRes.json();
+      const res = await fetch(apiUrl(`/api/submission/${userPinId}`), {
+        method: "DELETE",
+        headers: { "X-Submit-Token": token },
+      });
+      if (res.ok || res.status === 404) {
+        useSubmissionsStore.getState().removeSubmission(userPinId);
+        clearMyPin();
+      }
+    } catch {}
+  }
 
   // ── Heart reaction handler ────────────────────────────────
   async function handleReact(e: React.MouseEvent, url: string) {
@@ -404,7 +436,7 @@ export function ActivityFeed() {
           {cards.map((card, i) => {
             // Prefer stored title from Firestore, fall back to API fetch, then domain
             // Skip stored title if it's just the domain (metadata failed at submission time)
-            const storedTitle = card.title !== card.domain ? card.title : null;
+            const storedTitle = sanitizeTitle(card.title !== card.domain ? card.title : null);
             const title       = storedTitle || titles[card.url] || titleFromUrl(card.url) || card.domain;
             const isMyCard  = card.url === myUrl;
             const isHovered = card.url === hoveredUrl;
@@ -424,7 +456,12 @@ export function ActivityFeed() {
                 onMouseLeave={() => setHoveredUrl(null)}
                 style={{ animationDelay: `${i * 40}ms` }}
               >
-                {isMyCard && <div className="bubble-yours-label">your pin</div>}
+                {isMyCard && (
+                  <div className="bubble-yours-label">
+                    your pin
+                    <button className="bubble-delete-btn" onClick={handleDelete}>remove</button>
+                  </div>
+                )}
                 <div className={`bubble bubble--main${isMyCard ? " bubble--mine" : ""}`}>
                   <div className="bubble-meta">
                     <img
