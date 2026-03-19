@@ -1,12 +1,11 @@
 import { useEffect, useRef } from "react";
-import { collection, query, orderBy, limit, where, onSnapshot, getDocs, startAfter, Timestamp, QueryDocumentSnapshot } from "firebase/firestore";
+import { collection, query, orderBy, limit, onSnapshot, getDocs, startAfter, Timestamp, QueryDocumentSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import { useSubmissionsStore } from "../store/submissionsStore";
 import type { Submission } from "../types";
 
 
 const LOAD_LIMIT = 200;
-const LOOKBACK_DAYS = 30;
 
 function docToSubmission(id: string, data: any): Submission {
   return {
@@ -36,10 +35,8 @@ export function useSubmissions() {
 
   useEffect(() => {
     page2Fetched.current = false;
-    const cutoff = new Date(Date.now() - LOOKBACK_DAYS * 86_400_000);
     const q = query(
       collection(db, "submissions"),
-      where("updated_at", ">=", Timestamp.fromDate(cutoff)),
       orderBy("updated_at", "desc"),
       limit(LOAD_LIMIT),
     );
@@ -59,7 +56,6 @@ export function useSubmissions() {
         const lastDoc = snapshot.docs[snapshot.docs.length - 1] as QueryDocumentSnapshot;
         const q2 = query(
           collection(db, "submissions"),
-          where("updated_at", ">=", Timestamp.fromDate(cutoff)),
           orderBy("updated_at", "desc"),
           startAfter(lastDoc),
           limit(LOAD_LIMIT),

@@ -9,7 +9,6 @@ interface SubmissionBanner {
   city: string;
 }
 
-const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30-day in-memory window
 
 interface SubmissionsState {
   submissions:      Map<string, Submission>;
@@ -94,13 +93,5 @@ export const useSubmissionsStore = create<SubmissionsState>((set) => ({
   setUserSubmittedUrl: (url) => set({ userSubmittedUrl: url }),
   setMobileSheetOpen: (v) => set({ mobileSheetOpen: v }),
 
-  pruneOld: () =>
-    set((state) => {
-      const cutoff = Date.now() - MAX_AGE_MS;
-      const next = new Map(state.submissions);
-      for (const [id, s] of next) {
-        if (s.updated_at.getTime() < cutoff) next.delete(id);
-      }
-      return { submissions: next };
-    }),
+  pruneOld: () => {}, // submissions are kept permanently
 }));

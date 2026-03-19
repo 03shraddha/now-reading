@@ -302,12 +302,11 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
         const marker = L.marker([sub.lat, sub.lng], {
           icon: isUserPin ? makeUserPinIcon() : makeDotIcon(sub.count, isRecent(sub)),
         });
-        marker.on("click", (e) => {
-          L.DomEvent.stopPropagation(e);
-          marker.bindPopup(buildRichPopup(sub), {
-            offset: id === userPinIdRef.current ? [0, -40] : [0, 0],
-          }).openPopup();
-        });
+        // Pre-bind popup so Leaflet opens it natively on click (reliable on mobile)
+        if (!isUserPin) {
+          marker.bindPopup(buildRichPopup(sub), { offset: [0, 0] });
+        }
+        marker.on("click", (e) => L.DomEvent.stopPropagation(e));
         marker.on("mouseover", () => setHoveredUrl(sub.url));
         marker.on("mouseout",  () => setHoveredUrl(null));
         markerUrlMap.set(marker, sub.url);
@@ -333,14 +332,8 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
         // Don't override the user pin icon on count updates
         if (id !== userPinIdRef.current) {
           existing.setIcon(makeDotIcon(sub.count, false));
+          existing.setPopupContent(buildRichPopup(sub));
         }
-        existing.off("click");
-        existing.on("click", (e) => {
-          L.DomEvent.stopPropagation(e);
-          existing.bindPopup(buildRichPopup(sub), {
-            offset: id === userPinIdRef.current ? [0, -40] : [0, 0],
-          }).openPopup();
-        });
       }
     }
 
