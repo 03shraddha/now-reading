@@ -1,8 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useSubmissionsStore } from "../store/submissionsStore";
 import { apiUrl } from "../lib/api";
-import { classifyTheme } from "../lib/themes";
-import type { Theme } from "../types";
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -49,7 +47,6 @@ function fmtCount(n: number): string {
 }
 
 type SortMode = "recent" | "reactions";
-type ThemeFilter = "all" | Theme;
 
 interface FeedCard {
   url:         string;
@@ -93,7 +90,6 @@ export function ActivityFeed() {
 
   const [titles, setTitles]             = useState<Record<string, string>>({});
   const [sort, setSort]                 = useState<SortMode>("recent");
-  const [themeFilter, setThemeFilter]   = useState<ThemeFilter>("all");
   const [cityQuery, setCityQuery]       = useState("");
   const [reactingUrl, setReactingUrl]   = useState<string | null>(null); // tracks in-flight request
   const fetchedUrls                     = useRef<Set<string>>(new Set());
@@ -247,19 +243,13 @@ export function ActivityFeed() {
     if (allCards.length < 2 && sort !== "recent") setSort("recent");
   }, [allCards.length, sort]);
 
-  // ── Theme filter ───────────────────────────────────────────
-  const themeFiltered = useMemo(() => {
-    if (themeFilter === "all") return allCards;
-    return allCards.filter((c) => classifyTheme(c.domain, c.title ?? null) === themeFilter);
-  }, [allCards, themeFilter]);
-
   // ── Sort ──────────────────────────────────────────────────
   const sorted = useMemo(() => {
-    return [...themeFiltered].sort((a, b) => {
+    return [...allCards].sort((a, b) => {
       if (sort === "reactions") return (reactions.get(b.url) ?? 0) - (reactions.get(a.url) ?? 0);
       return b.latestAt.getTime() - a.latestAt.getTime();
     });
-  }, [themeFiltered, sort, reactions]);
+  }, [allCards, sort, reactions]);
 
   // ── Final cards: city filter, user's own card pinned to top ──
   const cards = useMemo(() => {
@@ -358,7 +348,7 @@ export function ActivityFeed() {
         onTouchEnd={onHandleTouchEnd}
         onClick={(e) => {
           const t = e.target as HTMLElement;
-          if (t.closest(".feed-sort-tabs, .feed-theme-tabs, .feed-city-input-wrap")) return;
+          if (t.closest(".feed-sort-tabs, .feed-city-input-wrap")) return;
           setMobileSheetOpen(!mobileSheetOpen);
         }}
       >
@@ -390,27 +380,6 @@ export function ActivityFeed() {
           ))}
         </div>
 
-        {/* Theme filter pills */}
-        <div className="feed-theme-tabs">
-          {(
-            [
-              { label: "all",        val: "all"         },
-              { label: "tech",       val: "tech"        },
-              { label: "science",    val: "science"     },
-              { label: "econ",       val: "economics"   },
-              { label: "philosophy", val: "philosophy"  },
-              { label: "art",        val: "art"         },
-            ] as { label: string; val: ThemeFilter }[]
-          ).map(({ label, val }) => (
-            <button
-              key={val}
-              className={`feed-theme-tab${themeFilter === val ? " feed-theme-tab--active" : ""}`}
-              onClick={() => setThemeFilter(val)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
         <div className="feed-city-input-wrap feed-city-input-wrap--always">
           <input
             id="feed-city-input"
@@ -428,7 +397,7 @@ export function ActivityFeed() {
 
       {cards.length === 0 ? (
         <div className="feed-empty">
-          {themeFilter !== "all" ? `no ${themeFilter} links in view` : "nothing here yet — pan the map"}
+          {"nothing here yet — pan the map"}
         </div>
       ) : (
         <div className="feed-list">
