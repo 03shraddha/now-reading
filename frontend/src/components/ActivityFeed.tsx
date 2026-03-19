@@ -23,6 +23,25 @@ function timeAgo(date: Date): string {
   return `${Math.floor(seconds / 31536000)}y`;
 }
 
+// Extract a readable title from the URL slug — instant, no network needed.
+// e.g. "https://x.substack.com/p/why-stoicism-matters" → "Why Stoicism Matters"
+function titleFromUrl(url: string): string | null {
+  try {
+    const { pathname } = new URL(url);
+    const parts = pathname.split("/").filter(Boolean);
+    const slug  = parts[parts.length - 1] ?? "";
+    const clean = slug.replace(/\.[a-z]{2,5}$/, ""); // strip extensions
+    if (clean.length < 5) return null;
+    // Skip generic path segments
+    if (/^(index|home|about|page|post|article|p|s|item|entry|read|view)$/i.test(clean)) return null;
+    // Must contain at least one hyphen/underscore to look like a slug, not an ID
+    if (!/[-_]/.test(clean) && /^\d+$/.test(clean)) return null;
+    return clean.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  } catch {
+    return null;
+  }
+}
+
 function fmtCount(n: number): string {
   if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k`;
   if (n >= 99)   return "99+";
@@ -417,7 +436,7 @@ export function ActivityFeed() {
             // Prefer stored title from Firestore, fall back to API fetch, then domain
             // Skip stored title if it's just the domain (metadata failed at submission time)
             const storedTitle = card.title !== card.domain ? card.title : null;
-            const title       = storedTitle || titles[card.url] || card.domain;
+            const title       = storedTitle || titles[card.url] || titleFromUrl(card.url) || card.domain;
             const isMyCard  = card.url === myUrl;
             const isHovered = card.url === hoveredUrl;
             const citiesSorted = [...card.cities].sort((a, b) => b.count - a.count);

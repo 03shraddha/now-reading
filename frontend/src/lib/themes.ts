@@ -48,8 +48,6 @@ const DOMAIN_MAP: [string, Theme][] = [
   ["cell.com",                "science"],
   ["quantamagazine.org",      "science"],
   ["ourworldindata.org",      "science"],
-  ["en.wikipedia.org",        "science"],
-  ["wikipedia.org",           "science"],
   // ── economics ─────────────────────────────────────────────────
   ["economist.com",           "economics"],
   ["ft.com",                  "economics"],
