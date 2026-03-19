@@ -4,7 +4,7 @@ import socket
 import ipaddress
 import time
 import httpx
-from urllib.parse import urlparse
+from urllib.parse import urlparse, unquote
 
 _HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
@@ -123,13 +123,8 @@ async def fetch_metadata(url: str) -> dict:
     )
     if scraped_title:
         scraped_title = _clean_scraped_title(scraped_title)
-    # Discard bot-challenge/error page titles that aren't real article titles
-    _JUNK_TITLES = {"just a moment", "access denied", "403 forbidden", "404 not found",
-                    "please wait", "checking your browser", "attention required"}
-    if scraped_title:
-        t_lower = scraped_title.lower()
-        if t_lower in _JUNK_TITLES or any(w in t_lower for w in _PAYWALL_WORDS):
-            scraped_title = None  # prefer slug over paywall/login page title
+    if scraped_title and _is_junk_scraped_title(scraped_title, domain):
+        scraped_title = None  # prefer slug/domain over junk title
     title = scraped_title or slug_title or domain
     description = (
         _extract_og_description(html)
@@ -166,6 +161,18 @@ _LEADING_ID_RE = re.compile(r'^\d+-')
 _FILE_EXT_RE = re.compile(r'\.(pdf|html?|aspx?|php|jsp|cfm)$', re.I)
 # arXiv-style paper IDs (e.g. 2301.00001) — not useful as a title slug
 _ARXIV_ID_RE = re.compile(r'^\d{4}\.\d{4,5}$')
+# Titles that indicate bot-challenge / error pages — not real article titles
+_JUNK_TITLES = {
+    "just a moment", "access denied", "403 forbidden", "404 not found",
+    "please wait", "checking your browser", "attention required",
+}
+
+# Matches titles that are a short prefix + long numeric ID: "P 187790585", "ID 4567890"
+_JUNK_ID_RE = re.compile(r'^[A-Za-z]{0,3}\s*\d{5,}$')
+
+# Trailing long numeric ID: "Reverend Insanity 7996858406002505"
+_TRAILING_NUM_RE = re.compile(r'\s+\d{6,}$')
+
 # Words in a scraped title that suggest a paywall/login page — prefer slug fallback over these
 _PAYWALL_WORDS = {
     "subscribe", "subscription", "already a subscriber",
@@ -180,18 +187,47 @@ _PAYWALL_WORDS = {
 def _clean_scraped_title(title: str) -> str:
     """
     Strip common noise from scraped <title> and og:title values:
+    - Percent-encoding (%20 etc.)
     - URL fragments (https://, http://)
-    - Site-name suffixes separated by |, ·, —, or —
+    - Site-name suffixes separated by |, ·, —, –, or spaced hyphen ( - )
+    - File extensions (.html, .pdf, etc.)
     - Trailing/leading whitespace
     """
+    # Decode percent-encoding first (e.g. %20 -> space)
+    try:
+        title = unquote(title)
+    except Exception:
+        pass
     # Cut off at the first occurrence of a URL scheme
     for scheme in ("https://", "http://", "https:", "http:"):
         idx = title.find(scheme)
         if idx > 0:
             title = title[:idx]
-    # Strip common site-name separators (| · — –) keeping only the first part
-    title = re.split(r'\s*[|·—–]\s*', title, maxsplit=1)[0]
+    # Strip common site-name separators (| · — – and spaced dash) — keep only the first part
+    title = re.split(r'\s*[|·—–]\s*|\s+-\s+', title, maxsplit=1)[0]
+    # Strip file extensions from the title itself (e.g. "Baby.Html" -> "Baby")
+    title = _FILE_EXT_RE.sub("", title)
     return title.strip()
+
+
+def _is_junk_scraped_title(title: str, domain: str) -> bool:
+    """Return True if the scraped title is not a real article title."""
+    if not title or len(title) < 4:
+        return True
+    t_lower = title.lower().strip()
+    if t_lower == domain.lower():
+        return True
+    if _JUNK_ID_RE.match(title.strip()):       # "P 187790585", "12345678"
+        return True
+    if _TRAILING_NUM_RE.search(title):          # "Reverend Insanity 7996858406002505"
+        return True
+    if '%' in title and re.search(r'%[0-9A-Fa-f]{2}', title):  # still has encoding
+        return True
+    if t_lower in _JUNK_TITLES:
+        return True
+    if any(w in t_lower for w in _PAYWALL_WORDS):
+        return True
+    return False
 
 
 def _title_from_url(url: str) -> str | None:

@@ -30,6 +30,7 @@ function sanitizeTitle(t: string | null): string | null {
   s = s.replace(/\.(html?|php|aspx?|jsp)$/i, "").trim(); // strip file extensions
   s = s.replace(/\s+\d{6,}$/, "").trim();                // strip trailing long numeric IDs
   if (s.length < 4 || /^\d+$/.test(s)) return null;
+  if (/^[A-Za-z]{0,3}\s*\d{5,}$/.test(s)) return null;  // "P 187790585" style IDs
   return s;
 }
 
@@ -437,7 +438,7 @@ export function ActivityFeed() {
             // Prefer stored title from Firestore, fall back to API fetch, then domain
             // Skip stored title if it's just the domain (metadata failed at submission time)
             const storedTitle = sanitizeTitle(card.title !== card.domain ? card.title : null);
-            const title       = storedTitle || titles[card.url] || titleFromUrl(card.url) || card.domain;
+            const title       = storedTitle || sanitizeTitle(titles[card.url] ?? null) || titleFromUrl(card.url) || card.domain;
             const isMyCard  = card.url === myUrl;
             const isHovered = card.url === hoveredUrl;
             const citiesSorted = [...card.cities].sort((a, b) => b.count - a.count);
