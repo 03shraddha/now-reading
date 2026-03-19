@@ -81,6 +81,12 @@ function isRecent(sub: Submission): boolean {
 
 // ── Rich popup HTML ────────────────────────────────────────────
 
+// Encode characters that could break out of an HTML attribute (e.g. a malformed
+// URL stored in Firestore containing a double-quote would close the href early).
+function safeHref(url: string): string {
+  return url.replace(/"/g, "%22").replace(/'/g, "%27").replace(/</g, "%3C").replace(/>/g, "%3E");
+}
+
 // Synchronous — uses data already stored in Firestore, no network call.
 // Removing the async fetch eliminates the delay that caused "tap does nothing" on mobile.
 function buildRichPopup(sub: Submission): string {
@@ -102,7 +108,7 @@ function buildRichPopup(sub: Submission): string {
       <span class="popup-city">${sub.city}, ${sub.country}${attribution}</span>
       <span class="popup-count">${sub.count} reading</span>
     </div>
-    <a href="${sub.url}" target="_blank" rel="noopener noreferrer" class="popup-link">Open →</a>
+    <a href="${safeHref(sub.url)}" target="_blank" rel="noopener noreferrer" class="popup-link">Open →</a>
   </div>`;
 }
 

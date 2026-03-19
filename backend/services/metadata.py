@@ -39,11 +39,39 @@ def _resolves_to_private(host: str) -> bool:
         addr_str = info[4][0]
         try:
             addr = ipaddress.ip_address(addr_str)
+            # Unwrap IPv4-mapped IPv6 (e.g. ::ffff:10.0.0.1 → 10.0.0.1) so
+            # _BLOCKED_NETWORKS IPv4 entries match correctly.
+            if isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped:
+                addr = addr.ipv4_mapped
             if any(addr in net for net in _BLOCKED_NETWORKS):
                 return True
         except ValueError:
             pass
     return False
+
+
+def _extract_og_title(html: str) -> str | None:
+    """Extract og:title regardless of whether property or content comes first."""
+    for tag_match in re.finditer(r'<meta\s[^>]+>', html, re.I | re.S):
+        tag = tag_match.group(0)
+        if not re.search(r'property=["\']og:title["\']', tag, re.I):
+            continue
+        content = re.search(r'content=["\']([^"\']+)["\']', tag, re.I)
+        if content:
+            return content.group(1)
+    return None
+
+
+def _extract_og_description(html: str) -> str | None:
+    """Extract og:description regardless of whether property or content comes first."""
+    for tag_match in re.finditer(r'<meta\s[^>]+>', html, re.I | re.S):
+        tag = tag_match.group(0)
+        if not re.search(r'property=["\']og:description["\']', tag, re.I):
+            continue
+        content = re.search(r'content=["\']([^"\']+)["\']', tag, re.I)
+        if content:
+            return content.group(1)
+    return None
 
 
 async def fetch_metadata(url: str) -> dict:
@@ -90,7 +118,7 @@ async def fetch_metadata(url: str) -> dict:
         return fallback
 
     scraped_title = (
-        _first_match(html, r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\']([^"\']+)["\']')
+        _extract_og_title(html)
         or _first_match(html, r'<title[^>]*>([^<]+)</title>')
     )
     # Discard bot-challenge/error page titles that aren't real article titles
@@ -102,7 +130,7 @@ async def fetch_metadata(url: str) -> dict:
             scraped_title = None  # prefer slug over paywall/login page title
     title = scraped_title or slug_title or domain
     description = (
-        _first_match(html, r'<meta[^>]+property=["\']og:description["\'][^>]+content=["\']([^"\']+)["\']')
+        _extract_og_description(html)
         or _first_match(html, r'<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\']+)["\']')
     )
 

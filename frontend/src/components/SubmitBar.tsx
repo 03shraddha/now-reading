@@ -77,12 +77,22 @@ function countryFlag(code: string): string {
   );
 }
 
-// Prepend https:// if the user typed a bare domain/path (e.g. "medium.com/article")
+// Normalise a user-typed URL: add protocol, strip query params and fragment.
+// This ensures "economist.com/article?utm_source=twitter#s2" and
+// "economist.com/article" resolve to the same Firestore key.
 function normalizeUrl(raw: string): string {
   const t = raw.trim();
   if (!t) return t;
-  if (/^https?:\/\//i.test(t)) return t;
-  return `https://${t}`;
+  const withProtocol = /^https?:\/\//i.test(t) ? t : `https://${t}`;
+  try {
+    const parsed = new URL(withProtocol);
+    // Strip query params and fragment — same article with ?utm_x= should match
+    parsed.search = "";
+    parsed.hash = "";
+    return parsed.toString();
+  } catch {
+    return withProtocol;
+  }
 }
 
 // Returns true when the response is HTML — Render's cold-start wake-up page
@@ -147,8 +157,12 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
     if (status !== "previewing" || !looksLikeArticle(normalizedUrl)) return [];
     const seen = new Set<string>();
     const results: { city: string; flag: string }[] = [];
+    const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+    const cutoff = Date.now() - THIRTY_DAYS_MS;
     for (const sub of submissions.values()) {
       if (sub.url !== normalizedUrl || !sub.city) continue;
+      // Skip stale submissions — someone who read 8 months ago isn't a co-reader
+      if (sub.updated_at.getTime() < cutoff) continue;
       const key = `${sub.city}|${sub.country_code}`;
       if (seen.has(key)) continue;
       seen.add(key);

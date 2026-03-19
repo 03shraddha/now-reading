@@ -256,18 +256,12 @@ async def submit(
     doc_id  = _make_doc_id(normalized, location["country_code"], location["city"])
     doc_ref = db.collection("submissions").document(doc_id)
 
-    existing = doc_ref.get()
-    if existing.exists:
-        count = (existing.get("count") or 0) + 1
-        doc_ref.update({
-            "count": Increment(1),
-            "updated_at": SERVER_TIMESTAMP,
-            "display_name":   display_name,
-            "twitter_handle": twitter_handle,
-        })
-    else:
-        count = 1
-        doc_ref.set({
+    # Atomic write: use merge=True + Increment(1) so concurrent submissions never
+    # clobber each other. Firestore treats a missing count field as 0 before
+    # incrementing, so this handles both first-ever and subsequent submissions.
+    # We no longer read before writing, eliminating the read-modify-write race.
+    doc_ref.set(
+        {
             "url": normalized,
             "domain": domain,
             "title": meta.get("title") if meta.get("title") != domain else None,
@@ -277,11 +271,17 @@ async def submit(
             "country_code": location["country_code"],
             "lat": location["lat"],
             "lng": location["lng"],
-            "count": 1,
+            "count": Increment(1),
             "updated_at": SERVER_TIMESTAMP,
             "display_name":   display_name,
             "twitter_handle": twitter_handle,
-        })
+        },
+        merge=True,
+    )
+    # We can't read back the post-increment count without an extra RPC.
+    # Return None; the frontend will display the marker without a specific count,
+    # or can re-fetch. This is preferable to a stale client-side count.
+    count = None
 
     return {
         "id": doc_id,
