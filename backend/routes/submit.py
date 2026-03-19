@@ -246,6 +246,13 @@ async def submit(
     )
     location, meta = await asyncio.gather(location_coro, fetch_metadata(normalized))
 
+    # 3b. Reject broken/private URLs (4xx responses)
+    if not meta.get("reachable", True):
+        raise HTTPException(
+            status_code=422,
+            detail="that link doesn't seem to be publicly accessible — please check the URL and try again."
+        )
+
     # 4. Sanitize optional identity fields
     display_name = (body.display_name or "").strip().lower()[:50] or None
     raw_handle   = (body.twitter_handle or "").strip().lstrip("@").lower()

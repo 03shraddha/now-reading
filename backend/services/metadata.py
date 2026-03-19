@@ -85,7 +85,8 @@ async def fetch_metadata(url: str) -> dict:
     domain = (parsed.netloc or "").replace("www.", "")
     favicon_url = f"https://www.google.com/s2/favicons?domain={domain}&sz=32"
     slug_title = _title_from_url(url)  # last-resort: readable slug from URL path
-    fallback = {"title": slug_title or domain, "description": None, "domain": domain, "favicon_url": favicon_url}
+    fallback         = {"title": slug_title or domain, "description": None, "domain": domain, "favicon_url": favicon_url, "reachable": True}
+    unreachable_fallback = {**fallback, "reachable": False}
 
     # SSRF guard — resolve hostname before any HTTP I/O (not cached; no real attempt made)
     if _resolves_to_private(parsed.hostname or ""):
@@ -111,8 +112,8 @@ async def fetch_metadata(url: str) -> dict:
                 # Cache failed HTTP responses so we don't hammer unreachable URLs
                 if len(_META_CACHE) > 1000:
                     _META_CACHE.clear()
-                _META_CACHE[url] = (fallback, time.time() + _META_TTL)
-                return fallback
+                _META_CACHE[url] = (unreachable_fallback, time.time() + _META_TTL)
+                return unreachable_fallback
             html = resp.text
     except Exception:
         return fallback
