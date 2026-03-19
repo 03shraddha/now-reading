@@ -7,7 +7,11 @@ import "leaflet.markercluster";
 import { useSubmissions } from "../hooks/useSubmissions";
 import { useReactions }   from "../hooks/useReactions";
 import { useSubmissionsStore } from "../store/submissionsStore";
+import { apiUrl } from "../lib/api";
 import type { Submission } from "../types";
+
+// Module-level title cache shared across all markers (survives re-renders)
+const titleCache = new Map<string, string>(); // url → title
 
 // Track which submission each marker represents, for hover highlighting
 const markerUrlMap = new Map<L.Marker, string>(); // marker → url
@@ -291,7 +295,17 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
       emitBounds();
     });
 
+    // ── ResizeObserver: fix tile grid after layout changes ────────
+    // When the hero card collapses to mini mode on submit, the map
+    // container's height changes but Leaflet doesn't see it.
+    // invalidateSize() re-computes the tile grid for the new dimensions.
+    const ro = new ResizeObserver(() => {
+      map.invalidateSize({ animate: false });
+    });
+    ro.observe(mapEl);
+
     return () => {
+      ro.disconnect();
       map.remove();
       mapRef.current = null;
     };
@@ -315,6 +329,26 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
         // Pre-bind popup so Leaflet opens it natively on click (reliable on mobile)
         if (!isUserPin) {
           marker.bindPopup(buildRichPopup(sub), { offset: [0, 0] });
+
+          // Lazy-fetch title on first open if not stored (old submissions)
+          marker.on("popupopen", () => {
+            const needsFetch = !sub.title || sub.title === sub.domain;
+            if (!needsFetch) return;
+            // Already cached from a previous open
+            if (titleCache.has(sub.url)) {
+              marker.setPopupContent(buildRichPopup({ ...sub, title: titleCache.get(sub.url)! }));
+              return;
+            }
+            fetch(apiUrl(`/api/metadata?url=${encodeURIComponent(sub.url)}`))
+              .then((r) => r.ok ? r.json() : null)
+              .then((data) => {
+                if (data?.title && data.title !== sub.domain) {
+                  titleCache.set(sub.url, data.title);
+                  marker.setPopupContent(buildRichPopup({ ...sub, title: data.title }));
+                }
+              })
+              .catch(() => {});
+          });
         }
         marker.on("click", (e) => {
           L.DomEvent.stopPropagation(e);

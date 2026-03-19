@@ -254,10 +254,14 @@ export function ActivityFeed() {
     return filtered.slice(0, 30);
   }, [sorted, cityQuery, myUrl]);
 
-  // ── Fetch titles ──────────────────────────────────────────
+  // ── Fetch titles — trigger on allCards so all URLs warm up immediately,
+  //    not just the top 30 visible ones. This means titles are ready by the
+  //    time the user scrolls or re-sorts.
   useEffect(() => {
-    for (const card of cards) {
+    for (const card of allCards) {
       if (fetchedUrls.current.has(card.url)) continue;
+      // Skip if Firestore already has a good title
+      if (card.title && card.title !== card.domain) continue;
       fetchedUrls.current.add(card.url);
       fetch(apiUrl(`/api/metadata?url=${encodeURIComponent(card.url)}`))
         .then((r) => r.ok ? r.json() : null)
@@ -268,7 +272,7 @@ export function ActivityFeed() {
         })
         .catch(() => {});
     }
-  }, [cards]);
+  }, [allCards]);
 
   // ── Heart reaction handler ────────────────────────────────
   async function handleReact(e: React.MouseEvent, url: string) {
