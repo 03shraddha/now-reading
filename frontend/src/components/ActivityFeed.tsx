@@ -66,6 +66,7 @@ export function ActivityFeed() {
   const reactions      = useSubmissionsStore((s) => s.reactions);
   const reactedUrls    = useSubmissionsStore((s) => s.reactedUrls);
   const setReactedUrls = useSubmissionsStore((s) => s.setReactedUrls);
+  const upsertReaction = useSubmissionsStore((s) => s.upsertReaction);
 
   const [titles, setTitles]             = useState<Record<string, string>>({});
   const [sort, setSort]                 = useState<SortMode>("recent");
@@ -280,13 +281,15 @@ export function ActivityFeed() {
     e.stopPropagation();
     if (reactingUrl === url) return; // debounce in-flight
 
-    const already = reactedUrls.has(url);
-    const action  = already ? "remove" : "add";
+    const already   = reactedUrls.has(url);
+    const action    = already ? "remove" : "add";
+    const prevCount = reactions.get(url) ?? 0;
 
-    // Optimistic update
+    // Optimistic update — heart fill + count
     const newSet = new Set(reactedUrls);
     if (already) newSet.delete(url); else newSet.add(url);
     setReactedUrls(newSet);
+    upsertReaction(url, already ? prevCount - 1 : prevCount + 1);
     try {
       localStorage.setItem("reactedUrls", JSON.stringify([...newSet]));
     } catch { /* storage may be unavailable */ }
@@ -300,8 +303,9 @@ export function ActivityFeed() {
         body: JSON.stringify({ url, action }),
       });
     } catch {
-      // On failure, roll back optimistic update
+      // On failure, roll back both optimistic updates
       setReactedUrls(reactedUrls);
+      upsertReaction(url, prevCount);
     } finally {
       setReactingUrl(null);
     }
