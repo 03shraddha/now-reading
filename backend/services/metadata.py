@@ -96,8 +96,10 @@ async def fetch_metadata(url: str) -> dict:
     # Discard bot-challenge/error page titles that aren't real article titles
     _JUNK_TITLES = {"just a moment", "access denied", "403 forbidden", "404 not found",
                     "please wait", "checking your browser", "attention required"}
-    if scraped_title and scraped_title.strip().lower() in _JUNK_TITLES:
-        scraped_title = None
+    if scraped_title:
+        t_lower = scraped_title.strip().lower()
+        if t_lower in _JUNK_TITLES or any(w in t_lower for w in _PAYWALL_WORDS):
+            scraped_title = None  # prefer slug over paywall/login page title
     title = scraped_title or slug_title or domain
     description = (
         _first_match(html, r'<meta[^>]+property=["\']og:description["\'][^>]+content=["\']([^"\']+)["\']')
@@ -128,6 +130,11 @@ _DATE_RE    = re.compile(r'^\d{4}(-\d{2}(-\d{2})?)?$')
 _HASH_RE    = re.compile(r'-[0-9a-f]{8,16}$', re.I)
 # Segments that are entirely hex (CMS content IDs, UUIDs, etc.)
 _ALL_HEX_RE = re.compile(r'^[0-9a-f\-]{8,}$', re.I)
+# Leading numeric ID used by Goodreads etc.: "44421460-book-title" → strip "44421460-"
+_LEADING_ID_RE = re.compile(r'^\d+-')
+# Words in a scraped title that suggest a paywall/login page — prefer slug fallback over these
+_PAYWALL_WORDS = {"subscribe", "subscription", "sign in", "log in", "login",
+                  "register", "create account", "premium", "members only"}
 
 
 def _title_from_url(url: str) -> str | None:
@@ -156,6 +163,8 @@ def _title_from_url(url: str) -> str | None:
 
         # Strip trailing platform hash ID (e.g. Medium's "-abc123def456")
         clean = _HASH_RE.sub("", seg)
+        # Strip leading numeric ID (e.g. Goodreads' "44421460-book-title")
+        clean = _LEADING_ID_RE.sub("", clean)
         if len(clean) < 4:             # stripping left nothing useful
             continue
 
