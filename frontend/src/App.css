@@ -731,7 +731,7 @@ html, body, #root {
 .submit-hero-btn:disabled { opacity: 0.28; cursor: not-allowed; box-shadow: none; }
 
 .submit-preview-card {
-  display: flex; align-items: center; gap: 14px;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
   padding: 14px 16px;
   background: rgba(255,255,255,0.7);
   border: 1px solid rgba(200,195,185,0.5);
@@ -739,9 +739,31 @@ html, body, #root {
   animation: scene-enter 0.3s cubic-bezier(0.22,1,0.36,1);
 }
 .preview-favicon { width: 26px; height: 26px; border-radius: 5px; flex-shrink: 0; box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
-.preview-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.preview-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
 .preview-title { font-size: 16px; font-weight: 600; color: #1A1820; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .preview-domain { font-size: 12px; color: #A09DAE; }
+
+/* Co-reader hint inside preview card */
+.preview-co-readers {
+  display: flex; align-items: center; gap: 6px;
+  width: 100%; padding-top: 8px; border-top: 1px solid rgba(200,195,185,0.4);
+  margin-top: 2px;
+}
+.preview-co-readers__label {
+  font-size: 12px; font-weight: 500; color: #6A5AF9; white-space: nowrap;
+}
+.preview-co-reader-flag {
+  font-size: 18px; line-height: 1; cursor: default;
+}
+
+/* Co-reader hint below mini pill */
+.mini-co-readers {
+  font-size: 12px; font-weight: 500; color: #6A5AF9;
+  display: flex; align-items: center; gap: 5px;
+  padding: 4px 6px 0;
+  animation: scene-enter 0.25s ease;
+}
+.mini-co-readers span { font-size: 16px; }
 
 .submit-hero-error   { font-size: 15px; font-weight: 400; color: #D44F6A; padding-left: 2px; }
 .submit-hero-success { font-size: 15px; font-weight: 600; color: #4EB896; text-align: center; animation: scene-enter 0.3s ease; }
@@ -1379,6 +1401,9 @@ html, body, #root {
 [data-theme="dark"] .submit-preview-card { background: rgba(24,27,37,0.8); border-color: rgba(42,45,62,0.7); }
 [data-theme="dark"] .preview-title { color: #E8E6F2; }
 [data-theme="dark"] .preview-domain { color: #52506A; }
+[data-theme="dark"] .preview-co-readers { border-top-color: rgba(42,45,62,0.7); }
+[data-theme="dark"] .preview-co-readers__label { color: #9B8FFB; }
+[data-theme="dark"] .mini-co-readers { color: #9B8FFB; }
 [data-theme="dark"] .submit-hero-error { color: #E0546A; }
 [data-theme="dark"] .submit-hero-success { color: #60C4A0; }
 

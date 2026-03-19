@@ -20,7 +20,7 @@ const DEFAULT_ZOOM = 5; // shows India + neighbours; user can zoom out to see gl
 function dotSize(count: number): number {
   if (count >= 20) return 22;
   if (count >= 6)  return 16;
-  return 10;
+  return 14;
 }
 
 function dotColor(count: number): "cool" | "warm" | "hot" {
@@ -59,10 +59,9 @@ function buildUserDropPopupHtml(sub: Submission): string {
   </div>`;
 }
 
-// Dot marker — circle with optional pulse or highlight ring
-// HIT_AREA is the clickable region; the visual dot is centered inside it.
-// Keeping HIT_AREA ≥ 32px ensures even the smallest dot is easy to tap on mobile.
-const HIT_AREA = 32;
+// Dot marker — circle with optional pulse or highlight ring.
+// iconSize is kept at the visual dot size so dots don't overlap each other's hit areas.
+// The extra tap area comes from .reading-dot::after { inset: -12px } in CSS.
 function makeDotIcon(count: number, isNew: boolean, highlighted = false) {
   const size = highlighted ? dotSize(count) + 8 : dotSize(count);
   const color = dotColor(count);
@@ -70,11 +69,9 @@ function makeDotIcon(count: number, isNew: boolean, highlighted = false) {
   const highlightClass = highlighted ? "reading-dot--highlighted" : "";
   return L.divIcon({
     className: "",
-    html: `<div style="width:${HIT_AREA}px;height:${HIT_AREA}px;display:flex;align-items:center;justify-content:center;cursor:pointer">
-      <div class="reading-dot reading-dot--${color} ${pulseClass} ${highlightClass}" style="width:${size}px;height:${size}px;flex-shrink:0"></div>
-    </div>`,
-    iconSize: [HIT_AREA, HIT_AREA],
-    iconAnchor: [HIT_AREA / 2, HIT_AREA / 2],
+    html: `<div class="reading-dot reading-dot--${color} ${pulseClass} ${highlightClass}"></div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
   });
 }
 
@@ -311,7 +308,12 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
         if (!isUserPin) {
           marker.bindPopup(buildRichPopup(sub), { offset: [0, 0] });
         }
-        marker.on("click", (e) => L.DomEvent.stopPropagation(e));
+        marker.on("click", (e) => {
+          L.DomEvent.stopPropagation(e);
+          // Explicitly open popup — bindPopup's auto-open can silently fail
+          // inside a MarkerCluster context after the cluster is spiderfied.
+          marker.openPopup();
+        });
         marker.on("mouseover", () => setHoveredUrl(sub.url));
         marker.on("mouseout",  () => setHoveredUrl(null));
         markerUrlMap.set(marker, sub.url);

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { PinDropPayload } from "../hooks/usePinDrop";
 import { useSubmissionsStore } from "../store/submissionsStore";
 import { apiUrl } from "../lib/api";
@@ -45,6 +45,36 @@ function loadIdentity(): { displayName: string; twitterHandle: string } {
 }
 function saveIdentity(displayName: string, twitterHandle: string) {
   localStorage.setItem(IDENTITY_KEY, JSON.stringify({ displayName, twitterHandle }));
+}
+
+// ── Co-reader helpers ─────────────────────────────────────────────────────
+
+// Sites where co-reader info adds noise rather than delight (utility / social / shopping)
+const UTILITY_DOMAINS = new Set([
+  "google.com", "youtube.com", "amazon.com", "twitter.com", "x.com",
+  "facebook.com", "instagram.com", "linkedin.com", "reddit.com",
+  "gmail.com", "notion.so", "figma.com", "github.com",
+]);
+
+// Returns true if the URL looks like an article/book/post rather than a homepage or utility page.
+// Heuristic: has at least one path segment containing letters (i.e. a slug, not just an ID).
+function looksLikeArticle(normalizedUrl: string): boolean {
+  try {
+    const { hostname, pathname } = new URL(normalizedUrl);
+    const domain = hostname.replace("www.", "");
+    if (UTILITY_DOMAINS.has(domain)) return false;
+    const segments = pathname.replace(/\/$/, "").split("/").filter(Boolean);
+    if (segments.length === 0) return false;
+    const last = segments[segments.length - 1];
+    return /[a-zA-Z]{3,}/.test(last); // slug must have real words, not just IDs
+  } catch { return false; }
+}
+
+function countryFlag(code: string): string {
+  if (!code || code.length !== 2) return "";
+  return String.fromCodePoint(
+    ...code.toUpperCase().split("").map((c) => 127397 + c.charCodeAt(0))
+  );
 }
 
 // Prepend https:// if the user typed a bare domain/path (e.g. "medium.com/article")
@@ -109,6 +139,23 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
   const heroBtnRef   = useRef<HTMLButtonElement>(null);
   const miniBtnRef   = useRef<HTMLButtonElement>(null);
   const tokenRef     = useSubmitToken();
+
+  // Co-readers: others who already submitted the same URL
+  const submissions  = useSubmissionsStore((s) => s.submissions);
+  const normalizedUrl = normalizeUrl(url);
+  const coReaders = useMemo(() => {
+    if (status !== "previewing" || !looksLikeArticle(normalizedUrl)) return [];
+    const seen = new Set<string>();
+    const results: { city: string; flag: string }[] = [];
+    for (const sub of submissions.values()) {
+      if (sub.url !== normalizedUrl || !sub.city) continue;
+      const key = `${sub.city}|${sub.country_code}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      results.push({ city: sub.city, flag: countryFlag(sub.country_code) });
+    }
+    return results.slice(0, 4);
+  }, [status, normalizedUrl, submissions]);
 
   // Cycle placeholder every 2 s (only when idle and empty)
   useEffect(() => {
@@ -337,6 +384,14 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
           </button>
         </form>
         {status === "error" && <div className="submit-mini-error">{errorMsg}</div>}
+        {coReaders.length > 0 && (
+          <div className="mini-co-readers">
+            join {coReaders.length} {coReaders.length === 1 ? "other" : "others"} →
+            {coReaders.map((r, i) => (
+              <span key={i} title={r.city}>{r.flag}</span>
+            ))}
+          </div>
+        )}
       </div>
     );
   }
@@ -410,6 +465,16 @@ export function SubmitBar({ collapsed, onFirstSubmit, onPinDrop, heroText }: Pro
               <span className="preview-title">{metadata.title}</span>
               <span className="preview-domain">{metadata.domain}</span>
             </div>
+            {coReaders.length > 0 && (
+              <div className="preview-co-readers">
+                <span className="preview-co-readers__label">
+                  join {coReaders.length} {coReaders.length === 1 ? "other" : "others"} →
+                </span>
+                {coReaders.map((r, i) => (
+                  <span key={i} className="preview-co-reader-flag" title={r.city}>{r.flag}</span>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
