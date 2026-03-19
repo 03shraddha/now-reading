@@ -160,9 +160,19 @@ _HASH_RE    = re.compile(r'-[0-9a-f]{8,16}$', re.I)
 _ALL_HEX_RE = re.compile(r'^[0-9a-f\-]{8,}$', re.I)
 # Leading numeric ID used by Goodreads etc.: "44421460-book-title" → strip "44421460-"
 _LEADING_ID_RE = re.compile(r'^\d+-')
+# Common file extensions to strip from URL path segments before slug extraction
+_FILE_EXT_RE = re.compile(r'\.(pdf|html?|aspx?|php|jsp|cfm)$', re.I)
+# arXiv-style paper IDs (e.g. 2301.00001) — not useful as a title slug
+_ARXIV_ID_RE = re.compile(r'^\d{4}\.\d{4,5}$')
 # Words in a scraped title that suggest a paywall/login page — prefer slug fallback over these
-_PAYWALL_WORDS = {"subscribe", "subscription", "sign in", "log in", "login",
-                  "register", "create account", "premium", "members only"}
+_PAYWALL_WORDS = {
+    "subscribe", "subscription", "already a subscriber",
+    "sign in", "sign up", "sign up for free",
+    "log in", "login",
+    "register", "create account", "create a free account",
+    "premium", "members only", "members-only",
+    "unlock", "get access", "paywall",
+}
 
 
 def _title_from_url(url: str) -> str | None:
@@ -185,6 +195,14 @@ def _title_from_url(url: str) -> str | None:
         if re.match(r'^\d+$', seg):    # pure numeric ID → skip
             continue
         if _ALL_HEX_RE.match(seg):     # UUID / pure hex ID → skip
+            continue
+
+        # Strip file extension before further checks (e.g. "2301.00001.pdf" → "2301.00001")
+        seg = _FILE_EXT_RE.sub("", seg)
+        if not seg:
+            continue
+
+        if _ARXIV_ID_RE.match(seg):    # arXiv paper ID (e.g. 2301.00001) → skip
             continue
         if len(seg) < 6:               # too short to be meaningful
             continue

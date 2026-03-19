@@ -114,7 +114,7 @@ export default function App() {
         <span className="app-title">now reading</span>
         <span className="app-tagline">{tagline}<span className="typewriter-cursor">|</span></span>
         <span className="app-subtitle">
-          {liveCount > 0 ? `${liveCount} live` : "live"}
+          {liveCount > 0 ? `${liveCount} links` : "links"}
         </span>
         <button
           className="theme-toggle"
