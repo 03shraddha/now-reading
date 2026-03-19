@@ -60,6 +60,9 @@ function buildUserDropPopupHtml(sub: Submission): string {
 }
 
 // Dot marker — circle with optional pulse or highlight ring
+// HIT_AREA is the clickable region; the visual dot is centered inside it.
+// Keeping HIT_AREA ≥ 32px ensures even the smallest dot is easy to tap on mobile.
+const HIT_AREA = 32;
 function makeDotIcon(count: number, isNew: boolean, highlighted = false) {
   const size = highlighted ? dotSize(count) + 8 : dotSize(count);
   const color = dotColor(count);
@@ -67,9 +70,11 @@ function makeDotIcon(count: number, isNew: boolean, highlighted = false) {
   const highlightClass = highlighted ? "reading-dot--highlighted" : "";
   return L.divIcon({
     className: "",
-    html: `<div class="reading-dot reading-dot--${color} ${pulseClass} ${highlightClass}"></div>`,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
+    html: `<div style="width:${HIT_AREA}px;height:${HIT_AREA}px;display:flex;align-items:center;justify-content:center;cursor:pointer">
+      <div class="reading-dot reading-dot--${color} ${pulseClass} ${highlightClass}" style="width:${size}px;height:${size}px;flex-shrink:0"></div>
+    </div>`,
+    iconSize: [HIT_AREA, HIT_AREA],
+    iconAnchor: [HIT_AREA / 2, HIT_AREA / 2],
   });
 }
 
