@@ -9,6 +9,7 @@ import { useReactions }   from "../hooks/useReactions";
 import { useSubmissionsStore } from "../store/submissionsStore";
 import { apiUrl } from "../lib/api";
 import type { Submission } from "../types";
+import { GlobeView3D } from "./GlobeView3D";
 
 // Module-level title cache shared across all markers (survives re-renders)
 const titleCache = new Map<string, string>(); // url → title
@@ -140,6 +141,7 @@ export interface MapViewHandle {
 
 interface MapViewProps {
   theme: "dark" | "light";
+  mode?: "2d" | "3d";
   onZoomChange?: (zoom: number) => void;
   onBoundsChange?: (bounds: { north: number; south: number; east: number; west: number }) => void;
 }
@@ -147,7 +149,7 @@ interface MapViewProps {
 // ── Component ──────────────────────────────────────────────────
 
 export const MapView = forwardRef<MapViewHandle, MapViewProps>(
-function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
+function MapView({ theme, mode = "2d", onZoomChange, onBoundsChange }, ref) {
   useSubmissions();
   useReactions();
 
@@ -165,6 +167,7 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
   const userPinId        = useSubmissionsStore((s) => s.userPinId);
   const userPinIdRef     = useRef(userPinId);
   userPinIdRef.current   = userPinId;
+  const globeApiRef      = useRef<MapViewHandle | null>(null);
 
   // Stable callback refs to avoid stale closures in map event handlers
   const onZoomChangeRef  = useRef(onZoomChange);
@@ -175,31 +178,50 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
   // ── Imperative handle for pin drop system ─────────────────────
   useImperativeHandle(ref, () => ({
     lockPanning: () => {
+      if (mode === "3d") {
+        globeApiRef.current?.lockPanning();
+        return;
+      }
       mapRef.current?.dragging.disable();
       mapRef.current?.scrollWheelZoom.disable();
     },
     unlockPanning: () => {
+      if (mode === "3d") {
+        globeApiRef.current?.unlockPanning();
+        return;
+      }
       mapRef.current?.dragging.enable();
       mapRef.current?.scrollWheelZoom.enable();
     },
     latLngToScreenPoint: (lat: number, lng: number) => {
+      if (mode === "3d") {
+        return globeApiRef.current?.latLngToScreenPoint(lat, lng) ?? null;
+      }
       if (!mapRef.current || !containerRef.current) return null;
       const pt   = mapRef.current.latLngToContainerPoint([lat, lng]);
       const rect = containerRef.current.getBoundingClientRect();
       return { x: rect.left + pt.x, y: rect.top + pt.y };
     },
     flyToWithBias: (lat: number, lng: number) => {
+      if (mode === "3d") {
+        globeApiRef.current?.flyToWithBias(lat, lng);
+        return;
+      }
       if (!mapRef.current) return;
       const currentZoom = mapRef.current.getZoom();
       mapRef.current.flyTo([lat, lng], Math.max(currentZoom, 10), {
         animate: true, duration: 0.6,
       });
     },
-    getZoom: () => mapRef.current?.getZoom() ?? DEFAULT_ZOOM,
-  }));
+    getZoom: () => {
+      if (mode === "3d") return globeApiRef.current?.getZoom() ?? DEFAULT_ZOOM;
+      return mapRef.current?.getZoom() ?? DEFAULT_ZOOM;
+    },
+  }), [mode]);
 
   // ── Init map once ─────────────────────────────────────────────
   useEffect(() => {
+    if (mode !== "2d") return;
     if (!containerRef.current || mapRef.current) return;
 
     const mapEl = containerRef.current;
@@ -309,10 +331,11 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
       map.remove();
       mapRef.current = null;
     };
-  }, []);
+  }, [mode]);
 
   // ── Sync markers when submissions change ──────────────────────
   useEffect(() => {
+    if (mode !== "2d") return;
     const clusterGroup = clusterGroupRef.current;
     const map          = mapRef.current;
     if (!clusterGroup || !map) return;
@@ -394,10 +417,11 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
       }
     }
 
-  }, [submissions]);
+  }, [submissions, mode]);
 
   // ── Highlight markers when hoveredUrl changes ─────────────────
   useEffect(() => {
+    if (mode !== "2d") return;
     for (const [marker, url] of markerUrlMap) {
       const sub = Array.from(submissionsRef.current.values()).find((s) => s.url === url);
       if (!sub) continue;
@@ -407,10 +431,11 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
         marker.setIcon(makeDotIcon(sub.count, false, url === hoveredUrl));
       }
     }
-  }, [hoveredUrl]);
+  }, [hoveredUrl, mode]);
 
   // ── Re-render user's own pin when userPinId changes ───────────
   useEffect(() => {
+    if (mode !== "2d") return;
     for (const [id, marker] of markersRef.current) {
       const sub = submissionsRef.current.get(id);
       if (!sub) continue;
@@ -426,10 +451,11 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
         marker.setIcon(makeDotIcon(sub.count, false, false));
       }
     }
-  }, [userPinId]);
+  }, [userPinId, mode]);
 
   // ── Swap tile layer when theme changes ────────────────────────
   useEffect(() => {
+    if (mode !== "2d") return;
     const map = mapRef.current;
     if (!map || !tileLayerRef.current) return;
     map.removeLayer(tileLayerRef.current);
@@ -439,18 +465,39 @@ function MapView({ theme, onZoomChange, onBoundsChange }, ref) {
       subdomains: "abcd",
       maxZoom: 19,
     }).addTo(map);
-  }, [theme]);
+  }, [theme, mode]);
 
   // ── Pan/highlight on store focus ──────────────────────────────
   const focusLocation    = useSubmissionsStore((s) => s.focusLocation);
   const setFocusLocation = useSubmissionsStore((s) => s.setFocusLocation);
 
   useEffect(() => {
-    if (!focusLocation || !mapRef.current) return;
-    // Snap fly — shorter duration for scene-cut feel
+    if (!focusLocation) return;
+    if (mode === "3d") {
+      globeApiRef.current?.flyToWithBias(focusLocation[0], focusLocation[1]);
+      setFocusLocation(null);
+      return;
+    }
+    if (!mapRef.current) return;
     mapRef.current.flyTo(focusLocation, 10, { animate: true, duration: 0.6 });
     setFocusLocation(null);
-  }, [focusLocation, setFocusLocation]);
+  }, [focusLocation, setFocusLocation, mode]);
+
+  if (mode === "3d") {
+    return (
+      <GlobeView3D
+        theme={theme}
+        submissions={submissions}
+        hoveredUrl={hoveredUrl}
+        onHoverUrl={setHoveredUrl}
+        focusLocation={focusLocation}
+        onFocusConsumed={() => setFocusLocation(null)}
+        onRegisterApi={(api) => {
+          globeApiRef.current = api;
+        }}
+      />
+    );
+  }
 
   return (
     <div
