@@ -1,23 +1,38 @@
 """
-One-time backfill script: update titles for Firestore docs that are missing one.
+One-time backfill script: update titles for Firestore docs that are missing
+or corrupted.
 
-Strategy (fast-first):
-  1. Skip docs that already have a real title.
-  2. Try slug extraction from the URL (instant, no HTTP) — handles Medium, Substack, etc.
-  3. If slug extraction fails, fall back to live metadata scraping (slow, has timeouts).
+Two passes:
+  1. Corrupted titles (contain "http" or end with junk): apply
+     _clean_scraped_title() to the stored value — instant, no HTTP.
+     If the cleaned title is still bad, fall through to pass 2.
+  2. Missing titles (null or just the domain): try slug extraction
+     (instant), then live scrape as last resort.
 
 Run from the backend/ directory:
     python backfill_titles.py
-
-Set FIREBASE_CREDENTIALS_PATH or FIREBASE_CREDENTIALS_JSON in .env as usual.
 """
 
 import asyncio
+import re
 from dotenv import load_dotenv
 load_dotenv()
 
 from firebase_client import get_db
-from services.metadata import fetch_metadata, _title_from_url
+from services.metadata import fetch_metadata, _title_from_url, _clean_scraped_title
+
+
+def _is_corrupted(title: str, domain: str) -> bool:
+    """Return True if a stored title looks corrupted and should be re-cleaned."""
+    if not title or title == domain:
+        return False  # missing/blank — handled separately
+    lower = title.lower()
+    return (
+        "http" in lower          # URL bleed-through
+        or title.endswith(":")   # truncated mid-URL ("https:")
+        or title.endswith("/")   # truncated mid-URL
+        or re.search(r'\bhttps?\s*$', lower) is not None  # ends with "https" or "http"
+    )
 
 
 async def backfill():
@@ -25,55 +40,98 @@ async def backfill():
     docs = list(db.collection("submissions").stream())
     print(f"Found {len(docs)} documents.\n")
 
-    needs_update = []
-    skipped = 0
+    corrupted   = []
+    missing     = []
+    good        = 0
 
     for doc in docs:
         data   = doc.to_dict()
-        title  = data.get("title")
+        title  = data.get("title") or ""
         domain = data.get("domain", "")
-        # Skip docs that already have a real title (not null, not just the domain)
-        if title and title != domain:
-            skipped += 1
-            continue
-        needs_update.append(doc)
+        if _is_corrupted(title, domain):
+            corrupted.append(doc)
+        elif not title or title == domain:
+            missing.append(doc)
+        else:
+            good += 1
 
-    print(f"Skipped {skipped} docs with good titles. Processing {len(needs_update)} docs...\n")
+    print(f"  Good titles:      {good}")
+    print(f"  Corrupted titles: {len(corrupted)}")
+    print(f"  Missing titles:   {len(missing)}")
+    print()
 
-    slug_updated  = 0
-    scrape_updated = 0
-    unchanged     = 0
+    fixed_clean  = 0
+    fixed_slug   = 0
+    fixed_scrape = 0
+    unchanged    = 0
 
-    for doc in needs_update:
+    # ── Pass 1: fix corrupted titles ──────────────────────────────
+    if corrupted:
+        print(f"--- Pass 1: fixing {len(corrupted)} corrupted titles ---")
+    for doc in corrupted:
         data   = doc.to_dict()
         url    = data.get("url", "")
         domain = data.get("domain", "")
+        old    = data.get("title", "")
 
-        # --- Pass 1: slug extraction (no HTTP, instant) ---
-        slug_title = _title_from_url(url)
-        if slug_title and slug_title != domain:
-            doc.reference.update({"title": slug_title})
-            print(f"  SLUG  {domain:30s}  {slug_title[:70]}")
-            slug_updated += 1
+        cleaned = _clean_scraped_title(old)
+        if cleaned and cleaned != domain and len(cleaned) >= 4:
+            doc.reference.update({"title": cleaned})
+            print(f"  CLEAN  {domain:30s}  {old[:40]!r}  →  {cleaned[:60]!r}")
+            fixed_clean += 1
             continue
 
-        # --- Pass 2: live scrape (HTTP, slower) ---
+        # Cleaned title still useless — try slug
+        slug = _title_from_url(url)
+        if slug and slug != domain:
+            doc.reference.update({"title": slug})
+            print(f"  SLUG   {domain:30s}  {slug[:60]!r}")
+            fixed_slug += 1
+            continue
+
+        # Last resort: live scrape
         meta = await fetch_metadata(url)
         scraped = meta.get("title", "")
         if scraped and scraped != domain:
             doc.reference.update({"title": scraped})
-            print(f"  SCRAPE {domain:30s}  {scraped[:70]}")
-            scrape_updated += 1
+            print(f"  SCRAPE {domain:30s}  {scraped[:60]!r}")
+            fixed_scrape += 1
+        else:
+            print(f"  SKIP   {domain:30s}  (no better title found)")
+            unchanged += 1
+
+    # ── Pass 2: fill in missing titles ────────────────────────────
+    if missing:
+        print(f"\n--- Pass 2: filling {len(missing)} missing titles ---")
+    for doc in missing:
+        data   = doc.to_dict()
+        url    = data.get("url", "")
+        domain = data.get("domain", "")
+
+        slug = _title_from_url(url)
+        if slug and slug != domain:
+            doc.reference.update({"title": slug})
+            print(f"  SLUG   {domain:30s}  {slug[:60]!r}")
+            fixed_slug += 1
+            continue
+
+        meta = await fetch_metadata(url)
+        scraped = meta.get("title", "")
+        if scraped and scraped != domain:
+            doc.reference.update({"title": scraped})
+            print(f"  SCRAPE {domain:30s}  {scraped[:60]!r}")
+            fixed_scrape += 1
         else:
             print(f"  SKIP   {domain:30s}  (no title found)")
             unchanged += 1
 
-    total_updated = slug_updated + scrape_updated
+    total = fixed_clean + fixed_slug + fixed_scrape
     print(f"\nDone.")
-    print(f"  Updated via slug:   {slug_updated}")
-    print(f"  Updated via scrape: {scrape_updated}")
-    print(f"  No title found:     {unchanged}")
-    print(f"  Total updated:      {total_updated} / {len(needs_update)}")
+    print(f"  Fixed via clean:  {fixed_clean}")
+    print(f"  Fixed via slug:   {fixed_slug}")
+    print(f"  Fixed via scrape: {fixed_scrape}")
+    print(f"  No title found:   {unchanged}")
+    print(f"  Total updated:    {total} / {len(corrupted) + len(missing)}")
 
 
 if __name__ == "__main__":
