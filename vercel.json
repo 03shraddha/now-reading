@@ -1,8 +1,6 @@
 {
-  "buildCommand": "cd frontend && npm install && npm run build",
-  "outputDirectory": "frontend/dist",
-  "rewrites": [
-    { "source": "/api/:path*", "destination": "/api/index" },
-    { "source": "/(.*)", "destination": "/index.html" }
+  "buildCommand": "cd frontend && npm install && npm run build && cd .. && mkdir -p api/static && cp -r frontend/dist/* api/static/",
+  "routes": [
+    { "src": "/(.*)", "dest": "/api/index" }
   ]
 }
