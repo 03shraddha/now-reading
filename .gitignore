@@ -11,6 +11,7 @@
 # Firebase project config files are safe to commit
 !firebase.json
 !firestore.indexes.json
+!vercel.json
 
 # Python
 __pycache__/
@@ -35,3 +36,5 @@ Thumbs.db
 # IDE
 .idea/
 .vscode/
+
+.vercel
