@@ -203,6 +203,33 @@ html, body, #root {
   background: #a6d5e8;
 }
 
+.globe-popup-card {
+  position: absolute;
+  z-index: 20;
+  width: min(260px, calc(100% - 32px));
+  background: rgba(250, 249, 247, 0.96);
+  backdrop-filter: blur(16px);
+  border: 1px solid #e2dfda;
+  border-radius: 14px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.globe-popup-close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #a09dae;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.globe-popup-close:hover { color: #1a1820; background: rgba(0, 0, 0, 0.05); }
+
 /* ══════════════════════════════════════════════════════════════
    ANIME TILE FILTER
    Light: warm paper tones — manga reference map feel
@@ -287,6 +314,22 @@ html, body, #root {
   flex-shrink: 0;
 }
 .theme-toggle:hover { color: #1A1820; background: rgba(0,0,0,0.05); border-color: #CCC9C0; }
+
+.map-mode-toggle {
+  background: none;
+  border: 1px solid rgba(200,195,185,0.6);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #A09DAE;
+  padding: 7px 10px;
+  line-height: 1;
+  transition: color 0.3s ease, background 0.3s ease, border-color 0.3s ease;
+  flex-shrink: 0;
+}
+.map-mode-toggle:hover { color: #1A1820; background: rgba(0,0,0,0.05); border-color: #CCC9C0; }
 
 /* Feed toggle — mobile only, hidden on desktop */
 .feed-toggle-mobile { display: none; }
@@ -1392,6 +1435,13 @@ html, body, #root {
   filter: hue-rotate(215deg) saturate(0.7) brightness(1.05) contrast(1.05);
 }
 [data-theme="dark"] .map-container .leaflet-container { background: #090A10; }
+[data-theme="dark"] .globe-popup-card {
+  background: rgba(20, 21, 29, 0.97);
+  border-color: #2a2d3e;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+[data-theme="dark"] .globe-popup-close { color: #565468; }
+[data-theme="dark"] .globe-popup-close:hover { color: #e8e6f2; background: rgba(255, 255, 255, 0.06); }
 
 /* Header */
 [data-theme="dark"] .app-header {
@@ -1404,6 +1454,8 @@ html, body, #root {
 [data-theme="dark"] .live-dot { background: #60C4A0; }
 [data-theme="dark"] .theme-toggle { color: #52506A; border-color: rgba(50,48,70,0.7); }
 [data-theme="dark"] .theme-toggle:hover { color: #E8E6F2; background: rgba(255,255,255,0.06); }
+[data-theme="dark"] .map-mode-toggle { color: #52506A; border-color: rgba(50,48,70,0.7); }
+[data-theme="dark"] .map-mode-toggle:hover { color: #E8E6F2; background: rgba(255,255,255,0.06); }
 
 /* Markers */
 [data-theme="dark"] .reading-dot--cool { background: #5AC8D8; }
@@ -1700,6 +1752,16 @@ html, body, #root {
     padding: 8px 10px;
     font-size: 18px;
     min-width: 40px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .map-mode-toggle {
+    padding: 8px 10px;
+    font-size: 11px;
+    min-width: 42px;
     min-height: 40px;
     display: flex;
     align-items: center;

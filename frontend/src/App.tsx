@@ -53,6 +53,7 @@ function SubmissionBanner() {
 export default function App() {
   const [submitted, setSubmitted] = useState(false);
   const [theme, setTheme]         = useState<"dark" | "light">("light");
+  const [mapMode, setMapMode]     = useState<"2d" | "3d">("2d");
   const rafRef                    = useRef<number | null>(null);
   const mapViewRef                = useRef<MapViewHandle | null>(null);
   const { state: pinState, triggerDrop } = usePinDrop(mapViewRef);
@@ -97,6 +98,9 @@ export default function App() {
   function toggleTheme() {
     setTheme((t) => (t === "dark" ? "light" : "dark"));
   }
+  function toggleMapMode() {
+    setMapMode((m) => (m === "2d" ? "3d" : "2d"));
+  }
 
   function handleBoundsChange(b: { north: number; south: number; east: number; west: number }) {
     useSubmissionsStore.getState().setMapBounds?.(b);
@@ -123,6 +127,13 @@ export default function App() {
         >
           {theme === "dark" ? "☀️" : "🌙"}
         </button>
+        <button
+          className="map-mode-toggle"
+          onClick={toggleMapMode}
+          aria-label={`Switch to ${mapMode === "2d" ? "3D globe" : "2D map"}`}
+        >
+          {mapMode === "2d" ? "3D" : "2D"}
+        </button>
         {/* Mobile-only feed toggle — hidden on desktop via CSS */}
         <button
           className="feed-toggle-mobile"
@@ -139,6 +150,7 @@ export default function App() {
         <MapView
           ref={mapViewRef}
           theme={theme}
+          mode={mapMode}
           onBoundsChange={handleBoundsChange}
         />
         <SubmitBar
